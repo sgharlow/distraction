@@ -1,0 +1,7 @@
+inspiration article: https://time.com/7372895/trump-obama-video-diversion/
+
+sample prototype: https://claude.ai/public/artifacts/b072f25f-e4ab-4abd-a4d9-9f7be28ab885
+
+production domain name: DISTRACTIONINDEX.ORG
+
+production URL: https://distractionindex.org

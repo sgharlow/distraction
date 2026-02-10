@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Brand colors from spec / prototype */
+  --color-damage: #DC2626;
+  --color-damage-light: #FCA5A5;
+  --color-distraction: #D97706;
+  --color-distraction-light: #FDE68A;
+  --color-noise: #6B7280;
+  --color-noise-light: #9CA3AF;
+  --color-mixed: #818CF8;
+  --color-mixed-light: #A78BFA;
+  --color-action: #059669;
+  --color-action-light: #ECFDF5;
+  --color-live: #22C55E;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Dark theme surfaces */
+  --color-surface-base: #050510;
+  --color-surface-raised: #08081a;
+  --color-surface-overlay: #0a0a1a;
+  --color-surface-border: #151528;
+  --color-surface-border-light: #252540;
+
+  /* Text */
+  --color-text-primary: #F3F4F6;
+  --color-text-secondary: #D1D5DB;
+  --color-text-muted: #9CA3AF;
+  --color-text-dim: #6B7280;
+
+  /* Fonts */
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-sans: var(--font-geist-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-surface-base);
+  color: var(--color-text-primary);
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-border-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-noise);
 }

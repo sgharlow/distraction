@@ -1,17 +1,30 @@
 {
-  "name": "distraction-app",
+  "name": "distraction-index",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backfill": "npx tsx scripts/backfill.ts",
+    "backfill:dry": "npx tsx scripts/backfill.ts --dry-run",
+    "backfill:resume": "npx tsx scripts/backfill.ts --resume",
+    "score-event": "npx tsx scripts/score-event.ts",
+    "freeze-week": "npx tsx scripts/freeze-week.ts",
+    "setup-db": "npx tsx scripts/setup-db.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "dotenv": "^17.2.4",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -20,7 +33,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "pg": "^8.18.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

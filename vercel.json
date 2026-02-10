@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/ingest",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/freeze",
+      "schedule": "0 5 * * 0"
+    }
+  ]
+}

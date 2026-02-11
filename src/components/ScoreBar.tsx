@@ -14,7 +14,9 @@ const colorMap = {
 };
 
 export function ScoreBar({ label, value, max = 5, color, weight }: ScoreBarProps) {
-  const pct = max > 0 ? (value / max) * 100 : 0;
+  // Clamp displayed value to [0, max] so bars render correctly even with unclamped DB data
+  const clamped = Math.min(max, Math.max(0, value));
+  const pct = max > 0 ? (clamped / max) * 100 : 0;
   const classes = colorMap[color];
   const [bgClass, textClass] = classes.split(' ');
 
@@ -34,7 +36,7 @@ export function ScoreBar({ label, value, max = 5, color, weight }: ScoreBarProps
           />
         </div>
         <span className={`text-[10px] font-bold min-w-[24px] text-right font-mono ${textClass}`}>
-          {value}/{max}
+          {clamped.toFixed(1)}/{max}
         </span>
       </div>
     </div>

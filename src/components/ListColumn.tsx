@@ -41,7 +41,7 @@ export function ListColumn({ list, events }: ListColumnProps) {
             {config.label}
           </div>
           <div className="text-[9.5px] text-text-dim">
-            {config.tag} · {events.length} events
+            {config.tag} · {events.length} {events.length === 1 ? 'event' : 'events'}
           </div>
         </div>
 

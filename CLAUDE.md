@@ -12,9 +12,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Start dev server
 npm run build        # Production build
 npm run lint         # ESLint
+npm run test         # Run test suite (vitest)
+npm run test:watch   # Run tests in watch mode
 ```
 
-No test suite yet — planned for Phase 8.
+Test suite: 180 tests across 18 files using Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, and UI components.
 
 ## Tech Stack
 

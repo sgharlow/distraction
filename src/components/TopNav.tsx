@@ -18,6 +18,7 @@ export function TopNav() {
           <NavLink href="/week/current" label="Dashboard" />
           <NavLink href="/undercovered" label="Undercovered" />
           <NavLink href="/smokescreen" label="Smokescreen" />
+          <NavLink href="/timeline" label="Timeline" />
           <NavLink href="/methodology" label="Method" />
           <NavLink href="/corrections" label="Corrections" />
         </nav>

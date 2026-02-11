@@ -79,7 +79,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
 
           {/* Three-column dashboard */}
           <div className="max-w-[1200px] mx-auto px-4 py-2.5">
-            <div className="flex gap-2.5 flex-wrap items-start">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               <ListColumn list="A" events={weekData.events.A} />
               <ListColumn list="B" events={weekData.events.B} />
               <ListColumn list="C" events={weekData.events.C} />

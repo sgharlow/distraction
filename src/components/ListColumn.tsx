@@ -34,7 +34,7 @@ export function ListColumn({ list, events }: ListColumnProps) {
   const config = listConfig[list];
 
   return (
-    <div className="flex-1 min-w-[280px]">
+    <div className="min-w-0">
       <div className={`${config.colorBg} border ${config.colorBorder} rounded-lg p-2.5`}>
         <div className="text-center mb-2.5">
           <div className={`text-xs font-extrabold uppercase tracking-widest ${config.colorText}`}>

@@ -3,7 +3,7 @@
 // All dates handled in ET (Eastern Time) per spec
 // ═══════════════════════════════════════════════════════════════
 
-import { format, addDays as dfAddDays, differenceInCalendarWeeks, startOfDay, isBefore, isAfter, isSameDay } from 'date-fns';
+import { format, addDays as dfAddDays, startOfDay, isBefore, isAfter, isSameDay } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
 const ET_TIMEZONE = 'America/New_York';

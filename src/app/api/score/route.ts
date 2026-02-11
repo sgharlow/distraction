@@ -88,15 +88,15 @@ export async function POST(request: NextRequest) {
       .from('events')
       .update({
         a_score: result.a_score.final_score,
-        a_components: result.a_score as any,
+        a_components: result.a_score as object,
         a_severity_multiplier:
           (result.a_score.severity.durability +
             result.a_score.severity.reversibility +
             result.a_score.severity.precedent) /
           3,
         b_score: result.b_score.final_score,
-        b_layer1_hype: result.b_score.layer1 as any,
-        b_layer2_distraction: result.b_score.layer2 as any,
+        b_layer1_hype: result.b_score.layer1 as object,
+        b_layer2_distraction: result.b_score.layer2 as object,
         b_intentionality_score: result.b_score.intentionality.total,
         primary_list: result.primary_list,
         is_mixed: result.is_mixed,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         confidence: result.confidence,
         score_rationale: result.score_rationale,
         action_item: result.action_item,
-        factual_claims: result.factual_claims as any,
+        factual_claims: result.factual_claims as object,
         score_version: newVersion,
       })
       .eq('id', event_id);
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       version_before: event.score_version,
       version_after: newVersion,
       prompt_version,
-      llm_response: result as any,
+      llm_response: result as object,
     });
 
     // 7. Recompute week stats

@@ -102,7 +102,8 @@ export default function MethodologyPage() {
               Events are assigned to List A (damage), List B (distraction), or List C (noise)
               based on dominance margin (A − B). A ±10 threshold prevents bucket thrash.
               Events with both high A and high B scores receive a <strong>MIXED</strong> badge.
-              List C catches events failing the noise gate (A &lt; 15 AND B &lt; 20).
+              List C catches low-salience events (A &lt; 25 AND B &lt; 25) and those
+              failing the noise gate (A &lt; 25, no institutional mechanism).
             </p>
           </section>
 

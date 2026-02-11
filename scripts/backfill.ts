@@ -81,6 +81,31 @@ const SINGLE_WEEK = getArg('week');
 const START_DATE = getArg('start');
 const END_DATE = getArg('end');
 
+// ── Classify primary_list using dominance margin logic (matches classify.ts) ──
+function classifyPrimaryList(
+  result: { a_score?: { final_score?: number }; b_score?: { final_score?: number }; primary_list?: string; noise_flag?: boolean; is_mixed?: boolean },
+  event: { mechanism_of_harm?: string | null },
+): string {
+  const a = result.a_score?.final_score ?? 0;
+  const b = result.b_score?.final_score ?? 0;
+  const D = a - b;
+  const mech = event.mechanism_of_harm;
+  const isLowMech = !mech || mech === 'norm_erosion_only';
+
+  // Noise gate
+  if (a < 25 && isLowMech && result.noise_flag) return 'C';
+  // Clear A-dominant
+  if (a >= 25 && D >= 10) return 'A';
+  // Clear B-dominant
+  if (b >= 25 && D <= -10) return 'B';
+  // Mixed
+  if (a >= 25 && b >= 25 && Math.abs(D) < 10) return a >= b ? 'A' : 'B';
+  // Low salience
+  if (a < 25 && b < 25) return 'C';
+  // Edge case
+  return a >= b ? 'A' : 'B';
+}
+
 // ── Clients ──
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   db: { schema: 'distraction' },
@@ -475,7 +500,7 @@ async function processWeek(
           b_layer1_hype: result.b_score?.layer1,
           b_layer2_distraction: result.b_score?.layer2,
           b_intentionality_score: result.b_score?.intentionality?.total,
-          primary_list: (result.primary_list || 'C').charAt(0).toUpperCase(),
+          primary_list: classifyPrimaryList(result, event),
           is_mixed: result.is_mixed || false,
           noise_flag: result.noise_flag || false,
           noise_reason_codes: result.noise_reason_codes || [],

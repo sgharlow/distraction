@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBadge } from './StatusBadge';
 import type { WeeklySnapshot } from '@/lib/types';

@@ -12,7 +12,7 @@ import { clusterArticlesIntoEvents } from './cluster';
 import { scoreEvent } from '@/lib/scoring/service';
 import { pairSmokescreens } from '@/lib/scoring/service';
 import { getWeekIdForDate } from '@/lib/weeks';
-import type { ArticleInput, IdentifiedEvent } from './types';
+import type { ArticleInput } from './types';
 import type { Event } from '@/lib/types';
 
 export interface PipelineResult {
@@ -207,15 +207,15 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
           .from('events')
           .update({
             a_score: scoreResult.a_score.final_score,
-            a_components: scoreResult.a_score as any,
+            a_components: scoreResult.a_score as object,
             a_severity_multiplier:
               (scoreResult.a_score.severity.durability +
                 scoreResult.a_score.severity.reversibility +
                 scoreResult.a_score.severity.precedent) /
               3,
             b_score: scoreResult.b_score.final_score,
-            b_layer1_hype: scoreResult.b_score.layer1 as any,
-            b_layer2_distraction: scoreResult.b_score.layer2 as any,
+            b_layer1_hype: scoreResult.b_score.layer1 as object,
+            b_layer2_distraction: scoreResult.b_score.layer2 as object,
             b_intentionality_score: scoreResult.b_score.intentionality.total,
             primary_list: scoreResult.primary_list,
             is_mixed: scoreResult.is_mixed,
@@ -224,7 +224,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
             confidence: scoreResult.confidence,
             score_rationale: scoreResult.score_rationale,
             action_item: scoreResult.action_item,
-            factual_claims: scoreResult.factual_claims as any,
+            factual_claims: scoreResult.factual_claims as object,
             article_count: articleHeadlines.length,
           })
           .eq('id', newEvent.id);
@@ -241,7 +241,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
           reason: 'Initial automated scoring',
           version_after: 1,
           prompt_version,
-          llm_response: scoreResult as any,
+          llm_response: scoreResult as object,
         });
 
         eventsScored++;
@@ -317,7 +317,7 @@ async function finishRun(
   supabase: ReturnType<typeof createAdminClient>,
   runId: string,
   status: 'completed' | 'failed',
-  data: Record<string, any>,
+  data: Record<string, unknown>,
 ) {
   await supabase
     .from('pipeline_runs')

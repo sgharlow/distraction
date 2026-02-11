@@ -9,7 +9,7 @@ import { calculateBScore } from './b-score';
 import { classifyEvent } from './classify';
 import { findSmokescreenPairs, type SmokescreenCandidate } from './smokescreen';
 import type { ScoringResult } from '@/lib/ingestion/types';
-import type { Event, ADriverKey, MechanismOfHarm, Scope, AffectedPopulation, NoiseReasonCode } from '@/lib/types';
+import type { Event, ADriverKey, MechanismOfHarm, Scope, AffectedPopulation, NoiseReasonCode, BScoreLayer1, BScoreLayer2 } from '@/lib/types';
 
 /**
  * Score a single event using Claude Sonnet.
@@ -65,8 +65,8 @@ export async function scoreEvent(params: {
   });
 
   const localB = calculateBScore({
-    layer1: result.b_score.layer1 as any,
-    layer2: result.b_score.layer2 as any,
+    layer1: result.b_score.layer1 as unknown as BScoreLayer1,
+    layer2: result.b_score.layer2 as unknown as BScoreLayer2,
     intentionality_total: result.b_score.intentionality.total,
     intentionality_indicators: result.b_score.intentionality.indicators,
   });

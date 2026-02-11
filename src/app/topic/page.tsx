@@ -1,10 +1,24 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { getAllTopics } from '@/lib/data/topics';
 
-export const metadata = {
-  title: 'Topics — The Distraction Index',
-  description: 'Browse all topic tags across all scored events.',
+export const metadata: Metadata = {
+  title: 'Topics',
+  description: 'Browse all topic tags across all scored events in The Distraction Index.',
+  openGraph: {
+    title: 'Topics',
+    description: 'Browse all topic tags across all scored events in The Distraction Index.',
+    url: '/topic',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Topics | The Distraction Index',
+    description: 'Browse all topic tags across all scored events.',
+  },
+  alternates: {
+    canonical: '/topic',
+  },
 };
 
 export default async function TopicsPage() {

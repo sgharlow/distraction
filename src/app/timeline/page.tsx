@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
@@ -9,10 +10,23 @@ interface TimelinePageProps {
   searchParams: Promise<{ list?: string }>;
 }
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Timeline — The Distraction Index',
-    description: 'Chronological view of all scored events across all weeks.',
+    title: 'Timeline',
+    description: 'Chronological view of all scored events across all weeks of The Distraction Index.',
+    openGraph: {
+      title: 'Timeline',
+      description: 'Chronological view of all scored events across all weeks. Damage, distraction, and noise — tracked over time.',
+      url: '/timeline',
+    },
+    twitter: {
+      card: 'summary',
+      title: 'Timeline | The Distraction Index',
+      description: 'Chronological view of all scored events across all weeks.',
+    },
+    alternates: {
+      canonical: '/timeline',
+    },
   };
 }
 

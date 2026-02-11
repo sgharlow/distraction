@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
@@ -8,13 +9,30 @@ interface SmokescreenPageProps {
   searchParams: Promise<{ week?: string }>;
 }
 
-export async function generateMetadata({ searchParams }: SmokescreenPageProps) {
+export async function generateMetadata({ searchParams }: SmokescreenPageProps): Promise<Metadata> {
   const sp = await searchParams;
   const weekStart = resolveWeekParam(sp.week ?? 'current');
   if (!weekStart) return { title: 'Smokescreen Map' };
+
+  const weekNum = getWeekNumber(weekStart);
+  const description = `Week ${weekNum} Smokescreen Map: distraction-to-damage pairings with displacement evidence. See which distractions are covering for real democratic damage.`;
+
   return {
-    title: `Smokescreen Map — Week ${getWeekNumber(weekStart)}`,
-    description: 'Distraction → Damage pairings with displacement evidence.',
+    title: `Smokescreen Map — Week ${weekNum}`,
+    description,
+    openGraph: {
+      title: `Smokescreen Map — Week ${weekNum}`,
+      description,
+      url: '/smokescreen',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Smokescreen Map — Week ${weekNum} | The Distraction Index`,
+      description,
+    },
+    alternates: {
+      canonical: '/smokescreen',
+    },
   };
 }
 

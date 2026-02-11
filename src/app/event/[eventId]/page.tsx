@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getEventDetail } from '@/lib/data/events';
@@ -23,15 +24,31 @@ interface EventPageProps {
   params: Promise<{ eventId: string }>;
 }
 
-export async function generateMetadata({ params }: EventPageProps) {
+export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
   const { eventId } = await params;
   const event = await getEventDetail(eventId);
   if (!event) return { title: 'Event Not Found' };
 
   const list = event.primary_list === 'A' ? 'Damage' : event.primary_list === 'B' ? 'Distraction' : 'Noise';
+  const description = `${list} event — A: ${event.a_score?.toFixed(1) ?? '—'} / B: ${event.b_score?.toFixed(1) ?? '—'}. ${event.summary?.slice(0, 150) ?? ''}`;
+
   return {
-    title: `${event.title}`,
-    description: `${list} event — A: ${event.a_score?.toFixed(1) ?? '—'} / B: ${event.b_score?.toFixed(1) ?? '—'}. ${event.summary?.slice(0, 150) ?? ''}`,
+    title: event.title,
+    description,
+    openGraph: {
+      title: event.title,
+      description,
+      url: `/event/${eventId}`,
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${event.title} | The Distraction Index`,
+      description,
+    },
+    alternates: {
+      canonical: `/event/${eventId}`,
+    },
   };
 }
 

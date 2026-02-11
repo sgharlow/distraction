@@ -4,7 +4,20 @@ import { A_DRIVER_KEYS, A_DRIVER_LABELS, A_DRIVER_WEIGHTS, MECHANISM_LABELS, MEC
 
 export const metadata: Metadata = {
   title: 'Methodology',
-  description: 'Full algorithmic transparency for The Distraction Index scoring system.',
+  description: 'Full algorithmic transparency for The Distraction Index scoring system. How we measure democratic damage and manufactured distractions.',
+  openGraph: {
+    title: 'Methodology',
+    description: 'Full algorithmic transparency for The Distraction Index scoring system. How we measure democratic damage and manufactured distractions.',
+    url: '/methodology',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Methodology | The Distraction Index',
+    description: 'Full algorithmic transparency. How we score democratic damage vs. manufactured distractions.',
+  },
+  alternates: {
+    canonical: '/methodology',
+  },
 };
 
 export default function MethodologyPage() {

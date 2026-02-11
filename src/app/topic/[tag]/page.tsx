@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
@@ -9,12 +10,30 @@ interface TopicPageProps {
   params: Promise<{ tag: string }>;
 }
 
-export async function generateMetadata({ params }: TopicPageProps) {
+export async function generateMetadata({ params }: TopicPageProps): Promise<Metadata> {
   const { tag } = await params;
   const decoded = decodeURIComponent(tag);
+  const events = await getEventsByTopic(decoded);
+  const eventCount = events.length;
+  const weekCount = new Set(events.map((e) => e.week_id)).size;
+  const description = `${eventCount} event${eventCount !== 1 ? 's' : ''} tagged #${decoded} across ${weekCount} week${weekCount !== 1 ? 's' : ''} of The Distraction Index.`;
+
   return {
-    title: `#${decoded} — The Distraction Index`,
-    description: `All events tagged with #${decoded} across all weeks.`,
+    title: `#${decoded}`,
+    description,
+    openGraph: {
+      title: `#${decoded}`,
+      description,
+      url: `/topic/${encodeURIComponent(decoded)}`,
+    },
+    twitter: {
+      card: 'summary',
+      title: `#${decoded} | The Distraction Index`,
+      description,
+    },
+    alternates: {
+      canonical: `/topic/${encodeURIComponent(decoded)}`,
+    },
   };
 }
 

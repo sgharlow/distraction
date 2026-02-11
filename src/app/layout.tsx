@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://distractionindex.org'),
   title: {
     default: 'The Distraction Index',
     template: '%s | The Distraction Index',
@@ -20,12 +21,32 @@ export const metadata: Metadata = {
   description:
     'Weekly civic intelligence report tracking democratic damage vs. manufactured distractions. See through the noise.',
   openGraph: {
-    title: 'The Distraction Index',
+    title: {
+      default: 'The Distraction Index',
+      template: '%s | The Distraction Index',
+    },
     description:
-      'Weekly civic intelligence report tracking democratic damage vs. manufactured distractions.',
+      'Weekly civic intelligence report tracking democratic damage vs. manufactured distractions. See through the noise.',
     url: 'https://distractionindex.org',
     siteName: 'The Distraction Index',
     type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: {
+      default: 'The Distraction Index',
+      template: '%s | The Distraction Index',
+    },
+    description:
+      'Weekly civic intelligence report tracking democratic damage vs. manufactured distractions. See through the noise.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://distractionindex.org',
   },
 };
 

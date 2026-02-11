@@ -4,7 +4,20 @@ import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Corrections',
-  description: 'Post-freeze corrections across all weekly editions of The Distraction Index.',
+  description: 'Post-freeze corrections across all weekly editions of The Distraction Index. Original scores are always preserved.',
+  openGraph: {
+    title: 'Corrections',
+    description: 'Post-freeze corrections across all weekly editions. Original scores are always preserved.',
+    url: '/corrections',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Corrections | The Distraction Index',
+    description: 'Post-freeze corrections across all weekly editions. Original scores are always preserved.',
+  },
+  alternates: {
+    canonical: '/corrections',
+  },
 };
 
 export default async function CorrectionsPage() {

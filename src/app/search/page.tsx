@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
@@ -8,12 +9,34 @@ interface SearchPageProps {
   searchParams: Promise<{ q?: string }>;
 }
 
-export async function generateMetadata({ searchParams }: SearchPageProps) {
+export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const sp = await searchParams;
   const q = sp.q?.trim();
+  const title = q ? `"${q}" — Search` : 'Search';
+  const description = q
+    ? `Search results for "${q}" across all scored events in The Distraction Index.`
+    : 'Search all scored events across all weeks of The Distraction Index.';
+
   return {
-    title: q ? `"${q}" — Search` : 'Search — The Distraction Index',
-    description: 'Search all scored events across all weeks.',
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: '/search',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${title} | The Distraction Index`,
+      description,
+    },
+    robots: {
+      index: !q,
+      follow: true,
+    },
+    alternates: {
+      canonical: '/search',
+    },
   };
 }
 

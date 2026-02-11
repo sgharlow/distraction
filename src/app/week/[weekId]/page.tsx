@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { resolveWeekParam, getWeekLabel, getWeekNumber, isCurrentWeek, toWeekId } from '@/lib/weeks';
 import { getWeekData } from '@/lib/data/weeks';
 import { getAllWeekSnapshots } from '@/lib/data/weeks';
@@ -15,7 +16,7 @@ interface WeekPageProps {
   params: Promise<{ weekId: string }>;
 }
 
-export async function generateMetadata({ params }: WeekPageProps) {
+export async function generateMetadata({ params }: WeekPageProps): Promise<Metadata> {
   const { weekId } = await params;
   const weekStart = resolveWeekParam(weekId);
   if (!weekStart) return { title: 'Week Not Found' };
@@ -23,10 +24,25 @@ export async function generateMetadata({ params }: WeekPageProps) {
   const label = getWeekLabel(weekStart);
   const weekNum = getWeekNumber(weekStart);
   const live = isCurrentWeek(weekStart);
+  const wid = toWeekId(weekStart);
+  const description = `The Distraction Index for ${label}. ${live ? 'Live updates throughout the week.' : 'Frozen weekly edition.'} Tracking democratic damage vs. manufactured distractions.`;
 
   return {
     title: `Week ${weekNum}: ${label}${live ? ' (Live)' : ''}`,
-    description: `The Distraction Index for ${label}. ${live ? 'Live updates throughout the week.' : 'Frozen weekly edition.'}`,
+    description,
+    openGraph: {
+      title: `Week ${weekNum}: ${label}${live ? ' (Live)' : ''}`,
+      description,
+      url: `/week/${wid}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Week ${weekNum}: ${label}${live ? ' (Live)' : ''} | The Distraction Index`,
+      description,
+    },
+    alternates: {
+      canonical: `/week/${wid}`,
+    },
   };
 }
 

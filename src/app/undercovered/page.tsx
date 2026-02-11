@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
@@ -11,13 +12,30 @@ interface UndercoveredPageProps {
   searchParams: Promise<{ week?: string }>;
 }
 
-export async function generateMetadata({ searchParams }: UndercoveredPageProps) {
+export async function generateMetadata({ searchParams }: UndercoveredPageProps): Promise<Metadata> {
   const sp = await searchParams;
   const weekStart = resolveWeekParam(sp.week ?? 'current');
   if (!weekStart) return { title: 'Undercovered' };
+
+  const weekNum = getWeekNumber(weekStart);
+  const description = `Week ${weekNum} Undercovered: high constitutional damage events receiving disproportionately low media attention.`;
+
   return {
-    title: `Undercovered — Week ${getWeekNumber(weekStart)}`,
-    description: 'High-damage events with low media attention.',
+    title: `Undercovered — Week ${weekNum}`,
+    description,
+    openGraph: {
+      title: `Undercovered — Week ${weekNum}`,
+      description,
+      url: '/undercovered',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Undercovered — Week ${weekNum} | The Distraction Index`,
+      description,
+    },
+    alternates: {
+      canonical: '/undercovered',
+    },
   };
 }
 

@@ -6,9 +6,9 @@ interface SmokescreenAlertProps {
 
 export function SmokescreenAlert({ snapshot }: SmokescreenAlertProps) {
   const si = snapshot.max_smokescreen_index;
-  if (!si || si <= 50) return null;
+  if (!si || si < 25) return null;
 
-  const severity = si > 75 ? 'CRITICAL' : 'HIGH';
+  const severity = si > 50 ? 'CRITICAL' : 'SIGNIFICANT';
 
   return (
     <div className="bg-damage/5 border-b border-damage/10 py-1.5 px-4">

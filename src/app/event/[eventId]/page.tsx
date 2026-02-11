@@ -81,6 +81,24 @@ export default async function EventPage({ params }: EventPageProps) {
             scope={event.scope}
             affectedPopulation={event.affected_population}
           />
+          {/* Metadata tags */}
+          <div className="flex gap-1 flex-wrap mt-1">
+            {event.institution && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-muted font-mono">
+                🏛 {event.institution}
+              </span>
+            )}
+            {event.actors && event.actors.length > 0 && event.actors.map((actor) => (
+              <span key={actor} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-muted font-mono">
+                👤 {actor}
+              </span>
+            ))}
+            {event.topic_tags && event.topic_tags.length > 0 && event.topic_tags.map((tag) => (
+              <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-dim font-mono">
+                #{tag}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Dual score display */}
@@ -254,6 +272,28 @@ export default async function EventPage({ params }: EventPageProps) {
                 Issued: {new Date(event.correction_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
             )}
+          </section>
+        )}
+
+        {/* Factual claims */}
+        {event.factual_claims && event.factual_claims.length > 0 && (
+          <section className="bg-white/[0.03] rounded-md p-3 mb-2">
+            <SectionLabel className="text-text-dim">Factual Claims</SectionLabel>
+            <div className="space-y-1">
+              {event.factual_claims.map((fc, i) => (
+                <div key={i} className="flex gap-1.5 text-[11px]">
+                  <span className={fc.verified ? 'text-live' : 'text-text-dim'}>
+                    {fc.verified ? '✓' : '○'}
+                  </span>
+                  <div>
+                    <span className="text-text-secondary">{fc.claim}</span>
+                    {fc.source && (
+                      <span className="text-text-dim ml-1 text-[9.5px]">— {fc.source}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

@@ -1,22 +1,47 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
 import { AttentionBudget } from '@/components/AttentionBudget';
 import { MechanismBadge } from '@/components/MechanismBadge';
 import { ActionItem } from '@/components/ActionItem';
-import { getCurrentWeekStart, toWeekId } from '@/lib/weeks';
-import { getWeekData } from '@/lib/data/weeks';
+import { resolveWeekParam, toWeekId, getWeekLabel, getWeekNumber, isCurrentWeek } from '@/lib/weeks';
+import { getWeekData, getAllWeekSnapshots } from '@/lib/data/weeks';
 
-export const metadata: Metadata = {
-  title: 'Undercovered',
-  description: 'High-damage events with low media attention — the stories that matter most.',
-};
+interface UndercoveredPageProps {
+  searchParams: Promise<{ week?: string }>;
+}
 
-export default async function UndercoveredPage() {
-  const weekStart = getCurrentWeekStart();
+export async function generateMetadata({ searchParams }: UndercoveredPageProps) {
+  const sp = await searchParams;
+  const weekStart = resolveWeekParam(sp.week ?? 'current');
+  if (!weekStart) return { title: 'Undercovered' };
+  return {
+    title: `Undercovered — Week ${getWeekNumber(weekStart)}`,
+    description: 'High-damage events with low media attention.',
+  };
+}
+
+export default async function UndercoveredPage({ searchParams }: UndercoveredPageProps) {
+  const sp = await searchParams;
+  const weekStart = resolveWeekParam(sp.week ?? 'current');
+  if (!weekStart) {
+    return (
+      <div className="min-h-screen">
+        <TopNav />
+        <main className="max-w-[780px] mx-auto px-4 py-6">
+          <p className="text-text-dim text-xs">Invalid week.</p>
+        </main>
+      </div>
+    );
+  }
+
   const weekId = toWeekId(weekStart);
+  const live = isCurrentWeek(weekStart);
   const weekData = await getWeekData(weekId);
+  const allWeeks = await getAllWeekSnapshots();
+
+  const prevWeek = allWeeks.find((w) => w.week_id < weekId);
+  const nextWeek = live ? null : allWeeks.find((w) => w.week_id > weekId);
 
   const undercovered = (weekData?.events.A ?? [])
     .filter((e) => {
@@ -26,18 +51,50 @@ export default async function UndercoveredPage() {
     .sort((a, b) => {
       const abA = (a.b_score ?? 0) - (a.a_score ?? 0);
       const abB = (b.b_score ?? 0) - (b.a_score ?? 0);
-      return abA - abB; // most undercovered first
+      return abA - abB;
     });
 
   return (
     <div className="min-h-screen">
       <TopNav />
       <main className="max-w-[780px] mx-auto px-4 py-6">
-        <h1 className="text-lg font-extrabold text-text-primary font-serif mb-1">
-          Undercovered High-Damage
-        </h1>
+        {/* Week nav */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-lg font-extrabold text-text-primary font-serif mb-0.5">
+              Undercovered High-Damage
+            </h1>
+            <p className="text-[11px] text-text-muted m-0">
+              Week {getWeekNumber(weekStart)}: {getWeekLabel(weekStart)}
+              {live ? ' · 🟢 LIVE' : ' · 🔒 FROZEN'}
+            </p>
+          </div>
+          <div className="flex gap-1">
+            {prevWeek ? (
+              <Link
+                href={`/undercovered?week=${prevWeek.week_id}`}
+                className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+              >
+                ◀ Prev
+              </Link>
+            ) : (
+              <span className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim/30">◀ Prev</span>
+            )}
+            {nextWeek ? (
+              <Link
+                href={`/undercovered?week=${nextWeek.week_id}`}
+                className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+              >
+                Next ▶
+              </Link>
+            ) : (
+              <span className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim/30">Next ▶</span>
+            )}
+          </div>
+        </div>
+
         <p className="text-[11.5px] text-text-muted mb-4 leading-relaxed">
-          Events with high constitutional damage but low media attention this week
+          Events with high constitutional damage but low media attention
           (Attention Budget &lt; −30).
         </p>
 

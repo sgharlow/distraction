@@ -1,20 +1,45 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
-import { getCurrentWeekStart, toWeekId, getWeekNumber } from '@/lib/weeks';
-import { getWeekData } from '@/lib/data/weeks';
+import { resolveWeekParam, toWeekId, getWeekLabel, getWeekNumber, isCurrentWeek } from '@/lib/weeks';
+import { getWeekData, getAllWeekSnapshots } from '@/lib/data/weeks';
 
-export const metadata: Metadata = {
-  title: 'Smokescreen Map',
-  description: 'Distraction → Damage pairings with displacement evidence.',
-};
+interface SmokescreenPageProps {
+  searchParams: Promise<{ week?: string }>;
+}
 
-export default async function SmokescreenPage() {
-  const weekStart = getCurrentWeekStart();
+export async function generateMetadata({ searchParams }: SmokescreenPageProps) {
+  const sp = await searchParams;
+  const weekStart = resolveWeekParam(sp.week ?? 'current');
+  if (!weekStart) return { title: 'Smokescreen Map' };
+  return {
+    title: `Smokescreen Map — Week ${getWeekNumber(weekStart)}`,
+    description: 'Distraction → Damage pairings with displacement evidence.',
+  };
+}
+
+export default async function SmokescreenPage({ searchParams }: SmokescreenPageProps) {
+  const sp = await searchParams;
+  const weekStart = resolveWeekParam(sp.week ?? 'current');
+  if (!weekStart) {
+    return (
+      <div className="min-h-screen">
+        <TopNav />
+        <main className="max-w-[860px] mx-auto px-4 py-6">
+          <p className="text-text-dim text-xs">Invalid week.</p>
+        </main>
+      </div>
+    );
+  }
+
   const weekId = toWeekId(weekStart);
   const weekNum = getWeekNumber(weekStart);
+  const live = isCurrentWeek(weekStart);
   const weekData = await getWeekData(weekId);
+  const allWeeks = await getAllWeekSnapshots();
+
+  const prevWeek = allWeeks.find((w) => w.week_id < weekId);
+  const nextWeek = live ? null : allWeeks.find((w) => w.week_id > weekId);
 
   const pairs = (weekData?.smokescreenPairs ?? []).sort(
     (a, b) => b.smokescreen_index - a.smokescreen_index
@@ -24,11 +49,43 @@ export default async function SmokescreenPage() {
     <div className="min-h-screen">
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
-        <h1 className="text-lg font-extrabold text-text-primary font-serif mb-1">
-          Smokescreen Map — Week {weekNum}
-        </h1>
+        {/* Week nav */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-lg font-extrabold text-text-primary font-serif mb-0.5">
+              Smokescreen Map — Week {weekNum}
+            </h1>
+            <p className="text-[11px] text-text-muted m-0">
+              {getWeekLabel(weekStart)}
+              {live ? ' · 🟢 LIVE' : ' · 🔒 FROZEN'}
+            </p>
+          </div>
+          <div className="flex gap-1">
+            {prevWeek ? (
+              <Link
+                href={`/smokescreen?week=${prevWeek.week_id}`}
+                className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+              >
+                ◀ Prev
+              </Link>
+            ) : (
+              <span className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim/30">◀ Prev</span>
+            )}
+            {nextWeek ? (
+              <Link
+                href={`/smokescreen?week=${nextWeek.week_id}`}
+                className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+              >
+                Next ▶
+              </Link>
+            ) : (
+              <span className="px-2 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim/30">Next ▶</span>
+            )}
+          </div>
+        </div>
+
         <p className="text-[11.5px] text-text-muted mb-4 leading-relaxed">
-          Distraction → Damage pairings with displacement evidence for this week.
+          Distraction → Damage pairings with displacement evidence.
         </p>
 
         {pairs.length === 0 ? (
@@ -53,10 +110,10 @@ export default async function SmokescreenPage() {
                   <div className="text-center mb-2">
                     <span
                       className={`text-[10.5px] font-extrabold tracking-widest ${
-                        isCritical ? 'text-damage' : 'text-distraction'
+                        isCritical ? 'text-damage' : si >= 25 ? 'text-distraction' : 'text-text-muted'
                       }`}
                     >
-                      {isCritical ? 'CRITICAL' : 'SIGNIFICANT'} SI:{si.toFixed(1)}
+                      {isCritical ? 'CRITICAL' : si >= 25 ? 'SIGNIFICANT' : 'LOW'} SI:{si.toFixed(1)}
                     </span>
                     <span className={`text-[9.5px] ml-2 font-bold ${dispColor}`}>
                       Disp:{dispLabel}

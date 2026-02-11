@@ -59,8 +59,8 @@ export default async function WeekPage({ params }: WeekPageProps) {
         <WeekSelector allWeeks={allWeeks} currentSnapshot={snapshot} />
       )}
 
-      {/* Smokescreen alert (live weeks with active smokescreens) */}
-      {snapshot && live && <SmokescreenAlert snapshot={snapshot} />}
+      {/* Smokescreen alert */}
+      {snapshot && <SmokescreenAlert snapshot={snapshot} />}
 
       {/* Weekly summary (frozen weeks) */}
       {snapshot && <WeekSummary snapshot={snapshot} />}

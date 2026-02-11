@@ -35,15 +35,17 @@ export function calculateBScore(params: {
 }): BScoreComponents {
   const { layer1, layer2, intentionality_total, intentionality_indicators = [] } = params;
 
-  // Layer 1: Intrinsic Hype Potential (55%)
+  const clamp = (v: number) => Math.min(5, Math.max(0, v));
+
+  // Layer 1: Intrinsic Hype Potential (55%) — clamp each driver to 0-5
   const hype =
-    (layer1.outrage_bait + layer1.meme_ability + layer1.novelty + layer1.media_friendliness) /
+    (clamp(layer1.outrage_bait) + clamp(layer1.meme_ability) + clamp(layer1.novelty) + clamp(layer1.media_friendliness)) /
     4 /
     5;
 
-  // Layer 2: Strategic Distraction Likelihood
+  // Layer 2: Strategic Distraction Likelihood — clamp each driver to 0-5
   const distraction =
-    (layer2.mismatch + layer2.timing + layer2.narrative_pivot + layer2.pattern_match) / 4 / 5;
+    (clamp(layer2.mismatch) + clamp(layer2.timing) + clamp(layer2.narrative_pivot) + clamp(layer2.pattern_match)) / 4 / 5;
 
   // Intent weight
   const intentWeight = getIntentWeight(intentionality_total);

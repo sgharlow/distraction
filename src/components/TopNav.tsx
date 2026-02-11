@@ -19,6 +19,8 @@ export function TopNav() {
           <NavLink href="/undercovered" label="Undercovered" />
           <NavLink href="/smokescreen" label="Smokescreen" />
           <NavLink href="/timeline" label="Timeline" />
+          <NavLink href="/topic" label="Topics" />
+          <NavLink href="/search" label="Search" />
           <NavLink href="/methodology" label="Method" />
           <NavLink href="/corrections" label="Corrections" />
         </nav>

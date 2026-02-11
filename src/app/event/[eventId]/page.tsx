@@ -94,9 +94,9 @@ export default async function EventPage({ params }: EventPageProps) {
               </span>
             ))}
             {event.topic_tags && event.topic_tags.length > 0 && event.topic_tags.map((tag) => (
-              <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-dim font-mono">
+              <Link key={tag} href={`/topic/${encodeURIComponent(tag)}`} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-dim font-mono no-underline hover:text-mixed hover:bg-mixed/10 transition-colors">
                 #{tag}
-              </span>
+              </Link>
             ))}
           </div>
         </div>

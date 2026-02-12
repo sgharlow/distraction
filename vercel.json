@@ -5,6 +5,10 @@
       "schedule": "0 */4 * * *"
     },
     {
+      "path": "/api/process",
+      "schedule": "5 */4 * * *"
+    },
+    {
       "path": "/api/freeze",
       "schedule": "0 5 * * 0"
     }

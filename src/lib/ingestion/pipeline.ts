@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// Ingestion Pipeline — Full orchestration
-// Fetches articles, deduplicates, clusters, scores, stores
+// Ingestion Pipeline — Split into two phases for Vercel 60s limit
+// Phase 1 (ingest): Fetch → Dedup → Store articles (~15s)
+// Phase 2 (process): Cluster → Score → Pair smokescreens (~45s)
 // ═══════════════════════════════════════════════════════════════
 
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -26,24 +27,16 @@ export interface PipelineResult {
   tokens: { input: number; output: number };
 }
 
-// Max time budget for the pipeline (50s to leave 10s buffer for Vercel's 60s limit)
+// Max time budget (50s to leave 10s buffer for Vercel's 60s limit)
 const PIPELINE_TIMEOUT_MS = 50_000;
 
 /**
- * Run the full ingestion pipeline.
- * Called by /api/ingest every 4 hours.
- * Designed to complete within 60s Vercel timeout.
+ * Phase 1: Fetch and store articles only. No Claude API calls.
+ * Called by /api/ingest every 4 hours. Completes in ~15-20s.
  */
 export async function runIngestPipeline(): Promise<PipelineResult> {
   const supabase = createAdminClient();
   const errors: string[] = [];
-  let totalInput = 0;
-  let totalOutput = 0;
-  const startTime = Date.now();
-
-  // Helper: check if we're running out of time
-  const timeLeft = () => PIPELINE_TIMEOUT_MS - (Date.now() - startTime);
-  const hasTime = () => timeLeft() > 5000; // need at least 5s
 
   // Clean up stale 'running' records from previous timed-out runs
   await supabase
@@ -64,7 +57,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     // 2. Ensure current week exists
     await supabase.rpc('ensure_current_week');
 
-    // 3. Fetch articles from all sources (with individual timeouts)
+    // 3. Fetch articles from all sources (in parallel, 10s timeout each)
     const [gdeltArticles, gnewsArticles, googleArticles] = await Promise.allSettled([
       fetchGdeltRecent(6).catch((e) => { errors.push(`GDELT: ${e.message}`); return [] as ArticleInput[]; }),
       fetchGNewsRecent().catch((e) => { errors.push(`GNews: ${e.message}`); return [] as ArticleInput[]; }),
@@ -96,49 +89,109 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     const newArticles = deduplicateArticles(allArticles, existingUrls);
     const articlesNew = newArticles.length;
 
-    if (newArticles.length === 0) {
-      await finishRun(supabase, runId, 'completed', {
-        articles_fetched: articlesFetched,
-        articles_new: 0,
-        events_created: 0,
-        events_scored: 0,
-        errors,
-      });
-      return {
-        run_id: runId,
-        articles_fetched: articlesFetched,
-        articles_new: 0,
-        events_created: 0,
-        events_scored: 0,
-        smokescreen_pairs_created: 0,
-        errors,
-        tokens: { input: 0, output: 0 },
-      };
+    // 6. Store new articles
+    if (newArticles.length > 0) {
+      const articleInserts = newArticles.map((a) => ({
+        url: a.url,
+        headline: a.headline,
+        publisher: a.publisher,
+        published_at: a.published_at,
+        week_id: currentWeekId,
+        ingestion_source: a.source,
+      }));
+
+      const { error: articleError } = await supabase
+        .from('articles')
+        .upsert(articleInserts, { onConflict: 'url', ignoreDuplicates: true });
+      if (articleError) errors.push(`Article insert error: ${articleError.message}`);
     }
 
-    // 6. Get existing events for this week (for clustering context)
-    const { data: existingEvents } = await supabase
-      .from('events')
-      .select('id, title')
-      .eq('week_id', currentWeekId);
+    // 7. Auto-freeze events older than 48h
+    await supabase.rpc('auto_freeze_events');
 
-    const existingEventTitles = (existingEvents || []).map((e) => e.title);
+    // 8. Finish — articles stored, processing deferred to /api/process
+    await finishRun(supabase, runId, 'completed', {
+      articles_fetched: articlesFetched,
+      articles_new: articlesNew,
+      events_created: 0,
+      events_scored: 0,
+      errors,
+    });
 
-    // 7. Cluster articles into events (skip if running low on time)
-    if (!hasTime()) {
-      errors.push('Clustering deferred — articles stored but no time for Claude clustering');
+    return {
+      run_id: runId,
+      articles_fetched: articlesFetched,
+      articles_new: articlesNew,
+      events_created: 0,
+      events_scored: 0,
+      smokescreen_pairs_created: 0,
+      errors,
+      tokens: { input: 0, output: 0 },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push(`Pipeline fatal error: ${msg}`);
+    await finishRun(supabase, runId, 'failed', { errors });
+    throw err;
+  }
+}
+
+/**
+ * Phase 2: Cluster unassigned articles into events and score them.
+ * Called by /api/process every 4 hours (offset from ingest).
+ * Uses Claude API for clustering and scoring.
+ */
+export async function runProcessPipeline(): Promise<PipelineResult> {
+  const supabase = createAdminClient();
+  const errors: string[] = [];
+  let totalInput = 0;
+  let totalOutput = 0;
+  const startTime = Date.now();
+
+  const timeLeft = () => PIPELINE_TIMEOUT_MS - (Date.now() - startTime);
+  const hasTime = () => timeLeft() > 5000;
+
+  // 1. Create pipeline run record
+  const { data: run } = await supabase
+    .from('pipeline_runs')
+    .insert({ run_type: 'process', status: 'running' })
+    .select()
+    .single();
+  const runId = run?.id || 'unknown';
+
+  try {
+    const currentWeekId = getWeekIdForDate(new Date());
+
+    // 2. Get unassigned articles (no event_id) for current week
+    const { data: unassignedArticles } = await supabase
+      .from('articles')
+      .select('url, headline, publisher, published_at, ingestion_source')
+      .eq('week_id', currentWeekId)
+      .is('event_id', null)
+      .limit(50);
+
+    const newArticles: ArticleInput[] = (unassignedArticles || []).map((a) => ({
+      url: a.url,
+      headline: a.headline,
+      publisher: a.publisher || 'unknown',
+      published_at: a.published_at,
+      source: a.ingestion_source || 'unknown',
+    }));
+
+    if (newArticles.length === 0) {
+      // No unassigned articles — just do smokescreen pairing + stats
+      await runPostProcessing(supabase, currentWeekId, errors);
       await finishRun(supabase, runId, 'completed', {
-        articles_fetched: articlesFetched,
-        articles_new: articlesNew,
+        articles_fetched: 0,
+        articles_new: 0,
         events_created: 0,
         events_scored: 0,
         errors,
-        metadata: { tokens: { input: totalInput, output: totalOutput } },
       });
       return {
         run_id: runId,
-        articles_fetched: articlesFetched,
-        articles_new: articlesNew,
+        articles_fetched: 0,
+        articles_new: 0,
         events_created: 0,
         events_scored: 0,
         smokescreen_pairs_created: 0,
@@ -147,48 +200,37 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
       };
     }
 
+    // 3. Get existing events for clustering context
+    const { data: existingEvents } = await supabase
+      .from('events')
+      .select('id, title')
+      .eq('week_id', currentWeekId);
+
+    const existingEventTitles = (existingEvents || []).map((e) => e.title);
+
+    // 4. Cluster articles into events (1 Claude Haiku call)
     const { events: identifiedEvents, tokens: clusterTokens } =
       await clusterArticlesIntoEvents(newArticles, existingEventTitles);
     totalInput += clusterTokens.input;
     totalOutput += clusterTokens.output;
 
-    // 8. Store new articles
-    const articleInserts = newArticles.map((a) => ({
-      url: a.url,
-      headline: a.headline,
-      publisher: a.publisher,
-      published_at: a.published_at,
-      week_id: currentWeekId,
-      ingestion_source: a.source,
-    }));
-
-    if (articleInserts.length > 0) {
-      const { error: articleError } = await supabase
-        .from('articles')
-        .upsert(articleInserts, { onConflict: 'url', ignoreDuplicates: true });
-      if (articleError) errors.push(`Article insert error: ${articleError.message}`);
-    }
-
-    // 9. Create and score new events (limited by time budget)
+    // 5. Create and score new events (limited by time budget)
     let eventsCreated = 0;
     let eventsScored = 0;
-    const MAX_EVENTS_PER_RUN = 3; // Score at most 3 events per run to stay within timeout
+    const MAX_EVENTS_PER_RUN = 2;
 
     for (const identified of identifiedEvents) {
       if (!hasTime()) {
-        errors.push(`Time budget exceeded — ${identifiedEvents.length - eventsCreated} events deferred to next run`);
+        errors.push(`Time budget exceeded — ${identifiedEvents.length - eventsCreated} events deferred`);
         break;
       }
 
       try {
-        // Check if this event matches an existing one (by title similarity)
+        // Check if this event matches an existing one
         const isExisting = existingEventTitles.some(
           (t) => t.toLowerCase() === identified.title.toLowerCase(),
         );
-        if (isExisting) {
-          // Just link new articles to existing event — skip creation
-          continue;
-        }
+        if (isExisting) continue;
 
         // Create the event
         const { data: newEvent, error: eventError } = await supabase
@@ -227,9 +269,9 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
             .in('url', articleUrls);
         }
 
-        // Score the event (if we have time and haven't hit the per-run limit)
+        // Score the event (if we have time and haven't hit the limit)
         if (eventsScored >= MAX_EVENTS_PER_RUN || !hasTime()) {
-          errors.push(`Scoring deferred for "${identified.title}" — will score on next run`);
+          errors.push(`Scoring deferred for "${identified.title}"`);
           continue;
         }
 
@@ -300,44 +342,16 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
       }
     }
 
-    // 10. Auto-freeze events older than 48h
-    await supabase.rpc('auto_freeze_events');
-
-    // 11. Run smokescreen pairing
+    // 6. Run post-processing (smokescreen pairing + stats)
     let smokescreenPairsCreated = 0;
-    const { data: weekEvents } = await supabase
-      .from('events')
-      .select('*')
-      .eq('week_id', currentWeekId);
-
-    if (weekEvents && weekEvents.length > 0) {
-      const pairs = pairSmokescreens(weekEvents as Event[]);
-
-      // Clear existing pairs for this week and re-insert
-      await supabase
-        .from('smokescreen_pairs')
-        .delete()
-        .eq('week_id', currentWeekId);
-
-      for (const pair of pairs) {
-        const { error: pairError } = await supabase.from('smokescreen_pairs').insert({
-          week_id: currentWeekId,
-          distraction_event_id: pair.distraction_event.id,
-          damage_event_id: pair.damage_event.id,
-          smokescreen_index: pair.final_si,
-          displacement_confidence: pair.displacement_confidence,
-        });
-        if (!pairError) smokescreenPairsCreated++;
-      }
+    if (hasTime()) {
+      smokescreenPairsCreated = await runPostProcessing(supabase, currentWeekId, errors);
     }
 
-    // 12. Recompute week stats
-    await supabase.rpc('compute_week_stats', { target_week_id: currentWeekId });
-
-    // 13. Finish
+    // 7. Finish
     await finishRun(supabase, runId, 'completed', {
-      articles_fetched: articlesFetched,
-      articles_new: articlesNew,
+      articles_fetched: 0,
+      articles_new: newArticles.length,
       events_created: eventsCreated,
       events_scored: eventsScored,
       errors,
@@ -346,8 +360,8 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
 
     return {
       run_id: runId,
-      articles_fetched: articlesFetched,
-      articles_new: articlesNew,
+      articles_fetched: 0,
+      articles_new: newArticles.length,
       events_created: eventsCreated,
       events_scored: eventsScored,
       smokescreen_pairs_created: smokescreenPairsCreated,
@@ -356,10 +370,50 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    errors.push(`Pipeline fatal error: ${msg}`);
+    errors.push(`Process pipeline fatal error: ${msg}`);
     await finishRun(supabase, runId, 'failed', { errors });
     throw err;
   }
+}
+
+/**
+ * Smokescreen pairing + week stats recomputation.
+ */
+async function runPostProcessing(
+  supabase: ReturnType<typeof createAdminClient>,
+  currentWeekId: string,
+  errors: string[],
+): Promise<number> {
+  let smokescreenPairsCreated = 0;
+
+  const { data: weekEvents } = await supabase
+    .from('events')
+    .select('*')
+    .eq('week_id', currentWeekId);
+
+  if (weekEvents && weekEvents.length > 0) {
+    const pairs = pairSmokescreens(weekEvents as Event[]);
+
+    await supabase
+      .from('smokescreen_pairs')
+      .delete()
+      .eq('week_id', currentWeekId);
+
+    for (const pair of pairs) {
+      const { error: pairError } = await supabase.from('smokescreen_pairs').insert({
+        week_id: currentWeekId,
+        distraction_event_id: pair.distraction_event.id,
+        damage_event_id: pair.damage_event.id,
+        smokescreen_index: pair.final_si,
+        displacement_confidence: pair.displacement_confidence,
+      });
+      if (!pairError) smokescreenPairsCreated++;
+    }
+  }
+
+  await supabase.rpc('compute_week_stats', { target_week_id: currentWeekId });
+
+  return smokescreenPairsCreated;
 }
 
 async function finishRun(

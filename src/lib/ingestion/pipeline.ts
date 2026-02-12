@@ -124,7 +124,29 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
 
     const existingEventTitles = (existingEvents || []).map((e) => e.title);
 
-    // 7. Cluster articles into events
+    // 7. Cluster articles into events (skip if running low on time)
+    if (!hasTime()) {
+      errors.push('Clustering deferred — articles stored but no time for Claude clustering');
+      await finishRun(supabase, runId, 'completed', {
+        articles_fetched: articlesFetched,
+        articles_new: articlesNew,
+        events_created: 0,
+        events_scored: 0,
+        errors,
+        metadata: { tokens: { input: totalInput, output: totalOutput } },
+      });
+      return {
+        run_id: runId,
+        articles_fetched: articlesFetched,
+        articles_new: articlesNew,
+        events_created: 0,
+        events_scored: 0,
+        smokescreen_pairs_created: 0,
+        errors,
+        tokens: { input: totalInput, output: totalOutput },
+      };
+    }
+
     const { events: identifiedEvents, tokens: clusterTokens } =
       await clusterArticlesIntoEvents(newArticles, existingEventTitles);
     totalInput += clusterTokens.input;

@@ -25,14 +25,11 @@ interface GNewsResponse {
   articles: GNewsArticle[];
 }
 
-/** Pre-defined search queries covering key topics */
+/** Pre-defined search queries covering key topics (limited to 3 for speed) */
 const SEARCH_QUERIES = [
-  'trump executive order',
-  'DOJ lawsuit voting rights',
-  'trump administration policy',
-  'white house executive action',
-  'trump congress legislation',
-  'federal agency purge',
+  'trump executive order OR policy',
+  'DOJ lawsuit OR investigation',
+  'federal agency OR congress action',
 ];
 
 /**
@@ -80,24 +77,25 @@ export async function searchGNews(params: {
 }
 
 /**
- * Fetch recent articles across multiple search queries.
- * Uses ~6 of the 100 daily requests.
+ * Fetch recent articles across multiple search queries (in parallel).
+ * Uses ~3 of the 100 daily requests.
  */
 export async function fetchGNewsRecent(): Promise<ArticleInput[]> {
-  const results: ArticleInput[] = [];
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
 
-  for (const query of SEARCH_QUERIES) {
-    try {
-      const articles = await searchGNews({ query, from: sixHoursAgo });
-      results.push(...articles);
-    } catch (err) {
-      console.error(`GNews query failed for "${query}":`, err);
-    }
-    // Small delay between requests to be respectful
-    await new Promise((r) => setTimeout(r, 500));
-  }
+  const settled = await Promise.allSettled(
+    SEARCH_QUERIES.map((query) =>
+      searchGNews({ query, from: sixHoursAgo }).catch((err) => {
+        console.error(`GNews query failed for "${query}":`, err);
+        return [] as ArticleInput[];
+      }),
+    ),
+  );
 
+  const results: ArticleInput[] = [];
+  for (const r of settled) {
+    if (r.status === 'fulfilled') results.push(...r.value);
+  }
   return results;
 }
 

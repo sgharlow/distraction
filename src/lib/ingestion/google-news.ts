@@ -57,17 +57,16 @@ export async function searchGoogleNews(query: string): Promise<ArticleInput[]> {
 }
 
 /**
- * Fetch recent articles across multiple queries.
+ * Fetch recent articles across multiple queries (in parallel).
  */
 export async function fetchGoogleNewsRecent(): Promise<ArticleInput[]> {
+  const settled = await Promise.allSettled(
+    RSS_QUERIES.map((query) => searchGoogleNews(query)),
+  );
+
   const results: ArticleInput[] = [];
-
-  for (const query of RSS_QUERIES) {
-    const articles = await searchGoogleNews(query);
-    results.push(...articles);
-    // Be respectful with rate
-    await new Promise((r) => setTimeout(r, 1000));
+  for (const r of settled) {
+    if (r.status === 'fulfilled') results.push(...r.value);
   }
-
   return results;
 }

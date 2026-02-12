@@ -55,9 +55,24 @@ export default function AdminPipelinePage() {
     return 'bg-distraction/20 text-distraction';
   };
 
+  const triggerProcess = async () => {
+    setTriggering(true);
+    setTriggerMessage('');
+    const res = await fetch('/api/admin/pipeline/trigger?type=process', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      setTriggerMessage('Process triggered successfully');
+      fetchRuns();
+    } else {
+      setTriggerMessage(`Error: ${data.error || 'Unknown error'}`);
+    }
+    setTriggering(false);
+  };
+
   const typeLabel = (type: string) => {
     const labels: Record<string, string> = {
       ingest: 'Ingest',
+      process: 'Process',
       score: 'Score',
       freeze: 'Freeze',
       backfill: 'Backfill',
@@ -93,13 +108,22 @@ export default function AdminPipelinePage() {
         </div>
       )}
 
-      <button
-        onClick={triggerIngest}
-        disabled={triggering}
-        className="bg-action text-white rounded px-4 py-2 text-sm font-semibold hover:bg-action/90 disabled:opacity-50 cursor-pointer mb-6"
-      >
-        {triggering ? 'Triggering...' : 'Ingest Now'}
-      </button>
+      <div className="flex gap-3 mb-6">
+        <button
+          onClick={triggerIngest}
+          disabled={triggering}
+          className="bg-action text-white rounded px-4 py-2 text-sm font-semibold hover:bg-action/90 disabled:opacity-50 cursor-pointer"
+        >
+          {triggering ? 'Triggering...' : 'Ingest Now'}
+        </button>
+        <button
+          onClick={triggerProcess}
+          disabled={triggering}
+          className="bg-distraction text-white rounded px-4 py-2 text-sm font-semibold hover:bg-distraction/90 disabled:opacity-50 cursor-pointer"
+        >
+          {triggering ? 'Triggering...' : 'Process Now'}
+        </button>
+      </div>
 
       {loading ? (
         <div className="text-text-dim py-8">Loading pipeline runs...</div>

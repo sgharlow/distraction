@@ -21,6 +21,7 @@
     "@anthropic-ai/sdk": "^0.74.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
+    "@vercel/analytics": "^1.6.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.4",

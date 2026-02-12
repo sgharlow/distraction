@@ -7,7 +7,7 @@ import Parser from 'rss-parser';
 import type { ArticleInput } from './types';
 
 const parser = new Parser({
-  timeout: 15000,
+  timeout: 10000,
   headers: {
     'User-Agent': 'DistractionIndex/1.0 (civic-intelligence; +https://distractionindex.org)',
   },

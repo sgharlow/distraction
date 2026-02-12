@@ -26,15 +26,31 @@ export interface PipelineResult {
   tokens: { input: number; output: number };
 }
 
+// Max time budget for the pipeline (50s to leave 10s buffer for Vercel's 60s limit)
+const PIPELINE_TIMEOUT_MS = 50_000;
+
 /**
  * Run the full ingestion pipeline.
  * Called by /api/ingest every 4 hours.
+ * Designed to complete within 60s Vercel timeout.
  */
 export async function runIngestPipeline(): Promise<PipelineResult> {
   const supabase = createAdminClient();
   const errors: string[] = [];
   let totalInput = 0;
   let totalOutput = 0;
+  const startTime = Date.now();
+
+  // Helper: check if we're running out of time
+  const timeLeft = () => PIPELINE_TIMEOUT_MS - (Date.now() - startTime);
+  const hasTime = () => timeLeft() > 5000; // need at least 5s
+
+  // Clean up stale 'running' records from previous timed-out runs
+  await supabase
+    .from('pipeline_runs')
+    .update({ status: 'failed', completed_at: new Date().toISOString(), errors: ['Timed out (stale running state)'] })
+    .eq('status', 'running')
+    .lt('started_at', new Date(Date.now() - 120_000).toISOString());
 
   // 1. Create pipeline run record
   const { data: run } = await supabase
@@ -48,11 +64,11 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     // 2. Ensure current week exists
     await supabase.rpc('ensure_current_week');
 
-    // 3. Fetch articles from all sources
+    // 3. Fetch articles from all sources (with individual timeouts)
     const [gdeltArticles, gnewsArticles, googleArticles] = await Promise.allSettled([
-      fetchGdeltRecent(6),
-      fetchGNewsRecent(),
-      fetchGoogleNewsRecent(),
+      fetchGdeltRecent(6).catch((e) => { errors.push(`GDELT: ${e.message}`); return [] as ArticleInput[]; }),
+      fetchGNewsRecent().catch((e) => { errors.push(`GNews: ${e.message}`); return [] as ArticleInput[]; }),
+      fetchGoogleNewsRecent().catch((e) => { errors.push(`Google: ${e.message}`); return [] as ArticleInput[]; }),
     ]);
 
     const allArticles: ArticleInput[] = [];
@@ -131,11 +147,17 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
       if (articleError) errors.push(`Article insert error: ${articleError.message}`);
     }
 
-    // 9. Create and score new events
+    // 9. Create and score new events (limited by time budget)
     let eventsCreated = 0;
     let eventsScored = 0;
+    const MAX_EVENTS_PER_RUN = 3; // Score at most 3 events per run to stay within timeout
 
     for (const identified of identifiedEvents) {
+      if (!hasTime()) {
+        errors.push(`Time budget exceeded — ${identifiedEvents.length - eventsCreated} events deferred to next run`);
+        break;
+      }
+
       try {
         // Check if this event matches an existing one (by title similarity)
         const isExisting = existingEventTitles.some(
@@ -183,7 +205,12 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
             .in('url', articleUrls);
         }
 
-        // Score the event
+        // Score the event (if we have time and haven't hit the per-run limit)
+        if (eventsScored >= MAX_EVENTS_PER_RUN || !hasTime()) {
+          errors.push(`Scoring deferred for "${identified.title}" — will score on next run`);
+          continue;
+        }
+
         const articleHeadlines = identified.article_indices
           .filter((i) => i < newArticles.length)
           .map((i) => newArticles[i].headline);

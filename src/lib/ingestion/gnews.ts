@@ -64,7 +64,7 @@ export async function searchGNews(params: {
   if (to) url.searchParams.set('to', to);
 
   const response = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(10000),
   });
 
   if (!response.ok) {

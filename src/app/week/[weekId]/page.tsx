@@ -69,6 +69,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
   return (
     <div className="min-h-screen">
       <TopNav />
+      <main>
 
       {/* Week selector — needs all weeks for navigation */}
       {snapshot && allWeeks.length > 0 && (
@@ -116,6 +117,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
           </p>
         </div>
       )}
+      </main>
     </div>
   );
 }

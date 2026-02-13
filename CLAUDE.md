@@ -16,7 +16,7 @@ npm run test         # Run test suite (vitest)
 npm run test:watch   # Run tests in watch mode
 ```
 
-Test suite: 180 tests across 18 files using Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, and UI components.
+Test suite: 204 tests across 20 files using Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, and error boundaries.
 
 ## Tech Stack
 
@@ -77,7 +77,7 @@ src/
   components/              # 17 React components (EventCard, DualScore, TopNav, etc.)
 supabase/migrations/       # SQL migrations (001-003)
 scripts/                   # Backfill, data quality, manual operations
-tests/                     # 18 test files (vitest)
+tests/                     # 20 test files (vitest)
 ```
 
 ## Pipeline Architecture (Split for Vercel 60s limit)
@@ -105,9 +105,10 @@ The pipeline is split into two separate cron jobs:
 Schema in `distraction` schema (not `public`). REST API needs `Content-Profile: distraction` and `Accept-Profile: distraction` headers.
 
 Migrations in `supabase/migrations/`:
-- `001_initial_schema.sql` — Tables: `weekly_snapshots`, `events`, `articles`, `score_changes`, `smokescreen_pairs`, `community_flags`, `pipeline_runs`
-- `002_rls_policies.sql` — Public read, admin/service_role write
-- `003_functions.sql` — `freeze_week()`, `ensure_current_week()`, `compute_week_stats()`, `auto_freeze_events()`, `create_week_snapshot()`
+- `20260208000001_initial_schema.sql` — Tables: `weekly_snapshots`, `events`, `articles`, `score_changes`, `smokescreen_pairs`, `community_flags`, `pipeline_runs`
+- `20260208000002_expose_schema.sql` — Expose `distraction` schema for API access
+- `20260208000003_rls_policies.sql` — Public read, admin/service_role write
+- `20260208000004_functions.sql` — `freeze_week()`, `ensure_current_week()`, `compute_week_stats()`, `auto_freeze_events()`, `create_week_snapshot()`
 
 ## Admin Interface
 
@@ -136,6 +137,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Supabase service role key (server-only)
 ANTHROPIC_API_KEY=               # Claude API key
 CRON_SECRET=                     # Vercel cron auth token
 NEXT_PUBLIC_SITE_URL=            # Production URL (https://distraction-two.vercel.app)
+GNEWS_API_KEY=                   # GNews API key for article ingestion
 ```
 
 ## Reference Files

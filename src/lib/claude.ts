@@ -17,7 +17,7 @@ function getClient(): Anthropic {
   return client;
 }
 
-export interface ClaudeResponse {
+interface ClaudeResponse {
   text: string;
   input_tokens: number;
   output_tokens: number;

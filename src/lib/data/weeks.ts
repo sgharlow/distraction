@@ -19,21 +19,6 @@ export interface WeekData {
 }
 
 /**
- * Fetch a weekly snapshot by week_id.
- */
-export async function getWeekSnapshot(weekId: string): Promise<WeeklySnapshot | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('weekly_snapshots')
-    .select('*')
-    .eq('week_id', weekId)
-    .single();
-
-  if (error || !data) return null;
-  return data as WeeklySnapshot;
-}
-
-/**
  * Fetch full week data: snapshot + events grouped by list + smokescreen pairs.
  */
 export async function getWeekData(weekId: string): Promise<WeekData | null> {

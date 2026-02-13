@@ -98,13 +98,6 @@ export function isFutureWeek(weekStart: Date): boolean {
 }
 
 /**
- * Check if the given week is in the past (should be frozen).
- */
-export function isPastWeek(weekStart: Date): boolean {
-  return isBefore(weekStart, getCurrentWeekStart());
-}
-
-/**
  * Get all week start dates from FIRST_WEEK_START to current week.
  * Returns newest first.
  */

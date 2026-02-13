@@ -93,7 +93,7 @@ export function isCurrentWeek(weekStart: Date): boolean {
 /**
  * Check if the given week is in the future (hasn't started yet).
  */
-export function isFutureWeek(weekStart: Date): boolean {
+function isFutureWeek(weekStart: Date): boolean {
   return isAfter(weekStart, getCurrentWeekStart());
 }
 
@@ -101,7 +101,7 @@ export function isFutureWeek(weekStart: Date): boolean {
  * Get all week start dates from FIRST_WEEK_START to current week.
  * Returns newest first.
  */
-export function getAllWeekStarts(): Date[] {
+function getAllWeekStarts(): Date[] {
   const current = getCurrentWeekStart();
   const weeks: Date[] = [];
   let d = new Date(FIRST_WEEK_START);

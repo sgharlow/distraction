@@ -10,6 +10,11 @@ export const metadata: Metadata = {
     description: 'Get in touch with The Distraction Index team.',
     url: '/contact',
   },
+  twitter: {
+    card: 'summary',
+    title: 'Contact | The Distraction Index',
+    description: 'Get in touch with The Distraction Index team.',
+  },
   alternates: {
     canonical: '/contact',
   },

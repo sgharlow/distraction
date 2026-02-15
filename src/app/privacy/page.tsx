@@ -10,6 +10,11 @@ export const metadata: Metadata = {
     description: 'Privacy policy for The Distraction Index.',
     url: '/privacy',
   },
+  twitter: {
+    card: 'summary',
+    title: 'Privacy Policy | The Distraction Index',
+    description: 'Privacy policy for The Distraction Index. How we handle your data.',
+  },
   alternates: {
     canonical: '/privacy',
   },

@@ -16,10 +16,10 @@ export function WeekBriefing({ snapshot, topDamage, topDistraction }: WeekBriefi
   return (
     <div className="bg-mixed/[0.03] border-b border-mixed/[0.08] py-2 px-4">
       <div className="max-w-[1200px] mx-auto">
-        <div className="text-[10px] font-extrabold text-mixed tracking-widest mb-0.5">
+        <div className="text-[12px] font-extrabold text-mixed tracking-widest mb-0.5">
           THIS WEEK IN 30 SECONDS
         </div>
-        <p className="text-xs text-text-secondary leading-relaxed m-0">
+        <p className="text-sm text-text-secondary leading-relaxed m-0">
           {briefing}
         </p>
       </div>

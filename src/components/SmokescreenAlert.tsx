@@ -13,8 +13,8 @@ export function SmokescreenAlert({ snapshot }: SmokescreenAlertProps) {
   return (
     <div className="bg-damage/5 border-b border-damage/10 py-1.5 px-4">
       <div className="max-w-[1200px] mx-auto flex items-center gap-1.5">
-        <span className="text-[11px]">⚠️</span>
-        <span className="text-[10.5px] text-damage-light">
+        <span className="text-[13px]">⚠️</span>
+        <span className="text-[12.5px] text-damage-light">
           <strong>Smokescreen:</strong>{' '}
           {snapshot.top_smokescreen_pair ?? 'Active pairing detected'} · SI: {si.toFixed(1)}{' '}
           <span className="font-bold">{severity}</span>

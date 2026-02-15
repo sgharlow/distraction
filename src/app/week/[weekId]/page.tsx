@@ -72,6 +72,12 @@ export default async function WeekPage({ params }: WeekPageProps) {
   // Even if there's no data yet, we still show the page shell
   const snapshot = weekData?.snapshot ?? null;
 
+  // Find prior week snapshot for week-over-week deltas
+  const currentIdx = snapshot ? allWeeks.findIndex((w) => w.week_id === snapshot.week_id) : -1;
+  const priorSnapshot = currentIdx >= 0 && currentIdx < allWeeks.length - 1
+    ? allWeeks[currentIdx + 1]
+    : null;
+
   return (
     <div className="min-h-screen">
       <TopNav />
@@ -97,7 +103,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
       {snapshot && <WeekSummary snapshot={snapshot} />}
 
       {/* Stats bar */}
-      {snapshot && <WeekStatsBar snapshot={snapshot} />}
+      {snapshot && <WeekStatsBar snapshot={snapshot} priorSnapshot={priorSnapshot} />}
 
       {/* Main content */}
       {weekData ? (
@@ -129,9 +135,9 @@ export default async function WeekPage({ params }: WeekPageProps) {
           {/* Three-column dashboard */}
           <FullIndexToggle>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-              <ListColumn list="A" events={weekData.events.A} />
-              <ListColumn list="B" events={weekData.events.B} />
-              <ListColumn list="C" events={weekData.events.C} />
+              <ListColumn list="A" events={weekData.events.A} staleDaysThreshold={live ? 14 : undefined} />
+              <ListColumn list="B" events={weekData.events.B} staleDaysThreshold={live ? 14 : undefined} />
+              <ListColumn list="C" events={weekData.events.C} staleDaysThreshold={live ? 14 : undefined} />
             </div>
           </FullIndexToggle>
 

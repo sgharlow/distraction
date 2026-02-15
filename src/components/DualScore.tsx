@@ -29,7 +29,7 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
         <div
           className={cn(
             'font-semibold text-damage opacity-70',
-            lg ? 'text-xs' : 'text-[9.5px]'
+            lg ? 'text-sm' : 'text-[11.5px]'
           )}
         >
           A
@@ -37,19 +37,19 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
         <div
           className={cn(
             'font-mono text-damage',
-            lg ? 'text-2xl' : 'text-[13px]',
+            lg ? 'text-2xl' : 'text-[15px]',
             aUp ? 'font-black opacity-100' : 'font-medium opacity-40'
           )}
         >
           {aScore?.toFixed(1) ?? '—'}
         </div>
         {showLabels && (
-          <div className="text-[8px] text-damage opacity-50 leading-tight">
+          <div className="text-[10px] text-damage opacity-50 leading-tight">
             Constitutional Damage
           </div>
         )}
         {showSeverity && aScore != null && (
-          <div className="text-[8.5px] font-bold text-damage leading-tight mt-0.5">
+          <div className="text-[10.5px] font-bold text-damage leading-tight mt-0.5">
             {getSeverityLabel(aScore)}
           </div>
         )}
@@ -68,7 +68,7 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
         <div
           className={cn(
             'font-semibold text-distraction opacity-70',
-            lg ? 'text-xs' : 'text-[9.5px]'
+            lg ? 'text-sm' : 'text-[11.5px]'
           )}
         >
           B
@@ -76,19 +76,19 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
         <div
           className={cn(
             'font-mono text-distraction',
-            lg ? 'text-2xl' : 'text-[13px]',
+            lg ? 'text-2xl' : 'text-[15px]',
             !aUp ? 'font-black opacity-100' : 'font-medium opacity-40'
           )}
         >
           {bScore?.toFixed(1) ?? '—'}
         </div>
         {showLabels && (
-          <div className="text-[8px] text-distraction opacity-50 leading-tight">
+          <div className="text-[10px] text-distraction opacity-50 leading-tight">
             Media Hype
           </div>
         )}
         {showSeverity && bScore != null && (
-          <div className="text-[8.5px] font-bold text-distraction leading-tight mt-0.5">
+          <div className="text-[10.5px] font-bold text-distraction leading-tight mt-0.5">
             {getSeverityLabel(bScore)}
           </div>
         )}

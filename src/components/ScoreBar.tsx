@@ -23,9 +23,9 @@ export function ScoreBar({ label, value, max = 5, color, weight }: ScoreBarProps
   return (
     <div className="mb-1">
       <div className="flex justify-between mb-px">
-        <span className="text-[11px] text-text-secondary">{label}</span>
+        <span className="text-[13px] text-text-secondary">{label}</span>
         {weight != null && (
-          <span className="text-[9.5px] text-text-dim font-mono">&times;{weight}</span>
+          <span className="text-[11.5px] text-text-dim font-mono">&times;{weight}</span>
         )}
       </div>
       <div className="flex items-center gap-1.5">
@@ -35,7 +35,7 @@ export function ScoreBar({ label, value, max = 5, color, weight }: ScoreBarProps
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className={`text-[10px] font-bold min-w-[24px] text-right font-mono ${textClass}`}>
+        <span className={`text-[12px] font-bold min-w-[24px] text-right font-mono ${textClass}`}>
           {clamped.toFixed(1)}/{max}
         </span>
       </div>

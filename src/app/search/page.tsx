@@ -49,7 +49,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     <div className="min-h-screen">
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
-        <h1 className="text-lg font-extrabold text-text-primary font-serif mb-3">
+        <h1 className="text-xl font-extrabold text-text-primary font-serif mb-3">
           Search Events
         </h1>
 
@@ -61,11 +61,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               name="q"
               defaultValue={q}
               placeholder="Search events, topics, summaries..."
-              className="flex-1 bg-surface-raised border border-surface-border rounded-md px-3 py-2 text-[13px] text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-mixed/40 transition-colors"
+              className="flex-1 bg-surface-raised border border-surface-border rounded-md px-3 py-2 text-[15px] text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-mixed/40 transition-colors"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-mixed/10 border border-mixed/20 rounded-md text-[12px] font-semibold text-mixed hover:bg-mixed/20 transition-colors"
+              className="px-4 py-2 bg-mixed/10 border border-mixed/20 rounded-md text-sm font-semibold text-mixed hover:bg-mixed/20 transition-colors"
             >
               Search
             </button>
@@ -74,13 +74,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
         {/* Results */}
         {q.length > 0 && (
-          <p className="text-[11px] text-text-muted mb-3">
+          <p className="text-[13px] text-text-muted mb-3">
             {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{q}&rdquo;
           </p>
         )}
 
         {q.length > 0 && results.length === 0 && (
-          <p className="text-text-dim text-xs">No events found matching your query.</p>
+          <p className="text-text-dim text-sm">No events found matching your query.</p>
         )}
 
         {results.length > 0 && (
@@ -96,17 +96,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={`text-[8px] font-bold tracking-widest text-${color}`}>
+                        <span className={`text-[10px] font-bold tracking-widest text-${color}`}>
                           {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
                         </span>
-                        <span className="text-[9px] text-text-dim">
+                        <span className="text-[11px] text-text-dim">
                           {event.event_date}
                         </span>
-                        <span className="text-[9px] text-text-dim">
+                        <span className="text-[11px] text-text-dim">
                           Week: {event.week_id}
                         </span>
                       </div>
-                      <div className="text-[12px] text-text-primary font-semibold leading-tight">
+                      <div className="text-sm text-text-primary font-semibold leading-tight">
                         {event.title}
                       </div>
                       <MechanismBadge
@@ -115,7 +115,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                         affectedPopulation={event.affected_population}
                       />
                       {event.summary && (
-                        <p className="text-[10.5px] text-text-muted mt-1 m-0 line-clamp-2 leading-relaxed">
+                        <p className="text-[12.5px] text-text-muted mt-1 m-0 line-clamp-2 leading-relaxed">
                           {event.summary}
                         </p>
                       )}
@@ -133,7 +133,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         {q.length === 0 && (
           <div className="text-center py-12">
             <div className="text-3xl mb-2">🔍</div>
-            <p className="text-[13px] text-text-dim">
+            <p className="text-[15px] text-text-dim">
               Search across all {'>'}1,500 scored events by keyword, topic, or phrase.
             </p>
           </div>

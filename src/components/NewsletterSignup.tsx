@@ -35,10 +35,10 @@ export function NewsletterSignup() {
     return (
       <div className="max-w-[600px] mx-auto px-4 py-6 text-center">
         <div className="bg-surface-raised border border-surface-border rounded-md p-5">
-          <div className="text-[10px] font-extrabold text-mixed tracking-widest mb-1">
+          <div className="text-[12px] font-extrabold text-mixed tracking-widest mb-1">
             YOU&apos;RE IN
           </div>
-          <p className="text-xs text-text-secondary m-0">
+          <p className="text-sm text-text-secondary m-0">
             We&apos;ll send you the Distraction Index every Sunday.
           </p>
         </div>
@@ -50,10 +50,10 @@ export function NewsletterSignup() {
     return (
       <div className="max-w-[600px] mx-auto px-4 py-6 text-center">
         <div className="bg-surface-raised border border-surface-border rounded-md p-5">
-          <div className="text-[10px] font-extrabold text-mixed tracking-widest mb-1">
+          <div className="text-[12px] font-extrabold text-mixed tracking-widest mb-1">
             ALREADY SUBSCRIBED
           </div>
-          <p className="text-xs text-text-secondary m-0">
+          <p className="text-sm text-text-secondary m-0">
             That email is already on the list. You&apos;re all set.
           </p>
         </div>
@@ -64,10 +64,10 @@ export function NewsletterSignup() {
   return (
     <div className="max-w-[600px] mx-auto px-4 py-6 text-center">
       <div className="bg-surface-raised border border-surface-border rounded-md p-5">
-        <div className="text-[10px] font-extrabold text-mixed tracking-widest mb-1">
+        <div className="text-[12px] font-extrabold text-mixed tracking-widest mb-1">
           WEEKLY BRIEFING — COMING SOON
         </div>
-        <p className="text-xs text-text-secondary mb-3 m-0">
+        <p className="text-sm text-text-secondary mb-3 m-0">
           Get the Distraction Index delivered to your inbox every Sunday.
         </p>
         <form onSubmit={handleSubmit} className="flex gap-2 justify-center max-w-[360px] mx-auto">
@@ -77,18 +77,18 @@ export function NewsletterSignup() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
-            className="flex-1 bg-surface-base border border-surface-border-light rounded px-3 py-1.5 text-xs text-text-primary placeholder:text-text-dim outline-none focus:border-mixed/50"
+            className="flex-1 bg-surface-base border border-surface-border-light rounded px-3 py-1.5 text-sm text-text-primary placeholder:text-text-dim outline-none focus:border-mixed/50"
           />
           <button
             type="submit"
             disabled={status === 'submitting'}
-            className="bg-mixed/20 border border-mixed/30 text-mixed text-[10px] font-bold tracking-wider px-3 py-1.5 rounded hover:bg-mixed/30 disabled:opacity-50 transition-colors"
+            className="bg-mixed/20 border border-mixed/30 text-mixed text-[12px] font-bold tracking-wider px-3 py-1.5 rounded hover:bg-mixed/30 disabled:opacity-50 transition-colors"
           >
             {status === 'submitting' ? 'SENDING...' : 'SUBSCRIBE'}
           </button>
         </form>
         {status === 'error' && (
-          <p className="text-[10px] text-damage mt-2 m-0">
+          <p className="text-[12px] text-damage mt-2 m-0">
             Something went wrong. Please try again.
           </p>
         )}

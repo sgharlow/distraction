@@ -38,18 +38,18 @@ export function EventCard({ event, list, rank }: EventCardProps) {
       className={`block bg-surface-raised border border-surface-border rounded-md px-2.5 py-2 mb-1 transition-all duration-100 ${colors.hoverBg} ${colors.hoverBorder}`}
     >
       <div className="flex items-center gap-1.5">
-        <span className={`text-[11.5px] font-extrabold min-w-[18px] font-mono ${colors.text}`}>
+        <span className={`text-[13.5px] font-extrabold min-w-[18px] font-mono ${colors.text}`}>
           #{rank}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex gap-1 items-center">
-            <span className="text-xs text-text-primary font-semibold leading-tight truncate">
+            <span className="text-sm text-text-primary font-semibold leading-tight truncate">
               {event.title}
             </span>
             {event.is_mixed && <MixedBadge />}
           </div>
           <div className="flex gap-1.5 items-center mt-px flex-wrap">
-            <span className="text-[9.5px] text-text-dim">{event.event_date}</span>
+            <span className="text-[11.5px] text-text-dim">{event.event_date}</span>
             {!isNoise && <AttentionBudget aScore={event.a_score} bScore={event.b_score} />}
           </div>
         </div>

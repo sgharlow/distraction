@@ -73,7 +73,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
           <button
             onClick={goPrev}
             disabled={!canPrev}
-            className="bg-transparent border border-surface-border-light rounded px-2.5 py-1 text-sm font-bold text-text-primary disabled:text-surface-border-light disabled:cursor-default cursor-pointer"
+            className="bg-white/[0.04] border border-surface-border-light rounded px-2.5 py-1 text-sm font-bold text-text-primary disabled:text-surface-border-light disabled:cursor-default cursor-pointer"
             aria-label="Previous week"
           >
             ◀
@@ -84,7 +84,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
               {formatShort(currentSnapshot.week_start)} – {formatFull(currentSnapshot.week_end)}
             </div>
             <div className="flex gap-1.5 justify-center items-center mt-0.5">
-              <span className="text-[10px] text-text-dim">Week {weekNum}</span>
+              <span className="text-[12px] text-text-dim">Week {weekNum}</span>
               <StatusBadge status={currentSnapshot.status} />
             </div>
           </div>
@@ -92,7 +92,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
           <button
             onClick={goNext}
             disabled={!canNext}
-            className="bg-transparent border border-surface-border-light rounded px-2.5 py-1 text-sm font-bold text-text-primary disabled:text-surface-border-light disabled:cursor-default cursor-pointer"
+            className="bg-white/[0.04] border border-surface-border-light rounded px-2.5 py-1 text-sm font-bold text-text-primary disabled:text-surface-border-light disabled:cursor-default cursor-pointer"
             aria-label="Next week"
           >
             ▶
@@ -100,7 +100,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
 
           <button
             onClick={() => setShowPicker(!showPicker)}
-            className="bg-transparent border border-surface-border-light rounded px-2 py-1 text-[13px] text-text-muted cursor-pointer"
+            className="bg-white/[0.04] border border-surface-border-light rounded px-2 py-1 text-[15px] text-text-muted cursor-pointer"
             aria-label="Open week picker"
           >
             📅
@@ -139,7 +139,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
         {/* Dropdown picker */}
         {showPicker && (
           <div className="mt-2 bg-[#0f0f28] border border-surface-border-light rounded-md p-2 max-h-[200px] overflow-y-auto">
-            <div className="text-[10px] text-text-dim font-bold tracking-widest mb-1">
+            <div className="text-[12px] text-text-dim font-bold tracking-widest mb-1">
               ALL WEEKS
             </div>
             {allWeeks.map((w) => {
@@ -152,7 +152,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
                     navigateTo(w.week_id);
                     setShowPicker(false);
                   }}
-                  className={`px-2 py-1 rounded cursor-pointer text-[11px] mb-px flex justify-between ${
+                  className={`px-2 py-1 rounded cursor-pointer text-[13px] mb-px flex justify-between ${
                     selected
                       ? 'bg-mixed/[0.08] text-mixed font-bold'
                       : 'text-text-secondary hover:bg-white/[0.03]'
@@ -163,7 +163,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
                     {formatFull(w.week_end)}
                   </span>
                   {isLive && (
-                    <span className="text-live text-[9px] font-bold">LIVE</span>
+                    <span className="text-live text-[11px] font-bold">LIVE</span>
                   )}
                 </div>
               );
@@ -187,10 +187,10 @@ function QuickButton({
   return (
     <button
       onClick={onClick}
-      className={`px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer ${
+      className={`px-2 py-0.5 rounded border text-[12px] font-semibold cursor-pointer ${
         active
           ? 'bg-mixed/[0.08] border-mixed/25 text-mixed'
-          : 'bg-transparent border-surface-border-light text-text-dim hover:text-text-muted'
+          : 'bg-white/[0.04] border-surface-border-light text-text-muted hover:text-text-primary'
       }`}
     >
       {label}

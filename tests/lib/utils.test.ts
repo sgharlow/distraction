@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn, fmtScore, listColor, getSeverityLabel } from '@/lib/utils';
+import { cn, fmtScore, fmtDelta, listColor, getSeverityLabel } from '@/lib/utils';
 
 describe('cn (class names utility)', () => {
   it('joins multiple class names', () => {
@@ -62,6 +62,40 @@ describe('fmtScore', () => {
 
   it('handles negative numbers', () => {
     expect(fmtScore(-5.7)).toBe('-5.7');
+  });
+});
+
+describe('fmtDelta', () => {
+  it('formats positive delta with + sign', () => {
+    expect(fmtDelta(10, 7)).toBe('+3');
+  });
+
+  it('formats negative delta without extra sign', () => {
+    expect(fmtDelta(5, 8)).toBe('-3');
+  });
+
+  it('formats zero delta as 0', () => {
+    expect(fmtDelta(5, 5)).toBe('0');
+  });
+
+  it('returns — when current is null', () => {
+    expect(fmtDelta(null, 5)).toBe('—');
+  });
+
+  it('returns — when prior is null', () => {
+    expect(fmtDelta(5, null)).toBe('—');
+  });
+
+  it('returns — when both are null', () => {
+    expect(fmtDelta(null, null)).toBe('—');
+  });
+
+  it('returns — when current is undefined', () => {
+    expect(fmtDelta(undefined, 5)).toBe('—');
+  });
+
+  it('respects decimal parameter', () => {
+    expect(fmtDelta(10.5, 7.2, 1)).toBe('+3.3');
   });
 });
 

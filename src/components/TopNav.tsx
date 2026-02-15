@@ -11,11 +11,11 @@ export function TopNav() {
       <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-1.5">
         <div>
           <Link href="/week/current" className="no-underline">
-            <h1 className="text-xl font-black text-text-primary font-serif m-0 leading-tight">
+            <h1 className="text-2xl font-black text-text-primary font-serif m-0 leading-tight">
               The Distraction Index
             </h1>
           </Link>
-          <p className="text-[9.5px] text-text-dim m-0">
+          <p className="text-[11.5px] text-text-dim m-0">
             Weekly civic intelligence report &middot; v2.2
           </p>
         </div>
@@ -23,7 +23,7 @@ export function TopNav() {
         {/* Hamburger button — visible only on mobile */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden flex flex-col gap-[3px] p-1.5 rounded border border-surface-border bg-transparent cursor-pointer"
+          className="md:hidden flex flex-col gap-[3px] p-1.5 rounded border border-surface-border bg-white/[0.04] cursor-pointer"
           aria-label="Toggle navigation"
           aria-expanded={menuOpen}
         >
@@ -67,7 +67,7 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
     <Link
       href={href}
       onClick={onClick}
-      className="px-2.5 py-1 rounded border border-surface-border text-[10.5px] font-semibold text-text-dim hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+      className="px-2.5 py-1 rounded border border-surface-border bg-white/[0.04] text-[12.5px] font-semibold text-text-muted hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
     >
       {label}
     </Link>

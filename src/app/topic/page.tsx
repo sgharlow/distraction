@@ -30,15 +30,15 @@ export default async function TopicsPage() {
     <div className="min-h-screen">
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
-        <h1 className="text-lg font-extrabold text-text-primary font-serif mb-1">
+        <h1 className="text-xl font-extrabold text-text-primary font-serif mb-1">
           Topics
         </h1>
-        <p className="text-[11px] text-text-muted mb-4">
+        <p className="text-[13px] text-text-muted mb-4">
           {topics.length} topic tag{topics.length !== 1 ? 's' : ''} across all weeks. Click to explore.
         </p>
 
         {topics.length === 0 ? (
-          <p className="text-text-dim text-xs">No topics found.</p>
+          <p className="text-text-dim text-sm">No topics found.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {topics.map(({ tag, count }) => {

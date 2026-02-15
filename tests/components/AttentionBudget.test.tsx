@@ -13,15 +13,15 @@ describe('AttentionBudget', () => {
     expect(screen.getByText(/UNDERCOVERED/)).toBeInTheDocument();
   });
 
-  it('shows MIXED label for values in between', () => {
+  it('shows BALANCED label for values in between', () => {
     render(<AttentionBudget aScore={40} bScore={40} />);
-    expect(screen.getByText(/MIXED/)).toBeInTheDocument();
+    expect(screen.getByText(/BALANCED/)).toBeInTheDocument();
   });
 
   it('handles null scores by treating them as 0', () => {
     render(<AttentionBudget aScore={null} bScore={null} />);
-    // 0 - 0 = 0, should be MIXED
-    expect(screen.getByText(/MIXED/)).toBeInTheDocument();
+    // 0 - 0 = 0, should be BALANCED
+    expect(screen.getByText(/BALANCED/)).toBeInTheDocument();
   });
 
   it('shows positive sign for positive budget', () => {

@@ -79,7 +79,7 @@ describe('generateLiveBriefing', () => {
     expect(result).toBeNull();
   });
 
-  it('generates briefing with both A and B events', () => {
+  it('generates editorial briefing with both A and B events', () => {
     const snapshot = makeSnapshot();
     const topA = makeEvent({ title: 'Big Damage', a_score: 72.5 });
     const topB = makeEvent({ title: 'Shiny Distraction', b_score: 65.0, primary_list: 'B' });
@@ -91,13 +91,12 @@ describe('generateLiveBriefing', () => {
     });
 
     expect(result).toContain('"Big Damage"');
-    expect(result).toContain('A: 72.5');
     expect(result).toContain('"Shiny Distraction"');
-    expect(result).toContain('B: 65.0');
+    expect(result).toContain('critical constitutional damage');
     expect(result).toContain('5 events tracked across 42 sources');
   });
 
-  it('generates briefing with A-only events', () => {
+  it('generates briefing with A-only events using critical language for high scores', () => {
     const snapshot = makeSnapshot();
     const topA = makeEvent({ title: 'Only Damage', a_score: 55.0 });
 
@@ -108,8 +107,22 @@ describe('generateLiveBriefing', () => {
     });
 
     expect(result).toContain('"Only Damage"');
-    expect(result).toContain('A: 55.0');
-    expect(result).not.toContain('media attention centered on');
+    expect(result).toContain('critical');
+    expect(result).toContain('55.0');
+  });
+
+  it('generates briefing with A-only events using notable language for moderate scores', () => {
+    const snapshot = makeSnapshot();
+    const topA = makeEvent({ title: 'Moderate Damage', a_score: 25.0 });
+
+    const result = generateLiveBriefing({
+      snapshot,
+      topDamage: [topA],
+      topDistraction: [],
+    });
+
+    expect(result).toContain('"Moderate Damage"');
+    expect(result).toContain('25.0');
   });
 
   it('generates briefing with B-only events', () => {
@@ -124,10 +137,9 @@ describe('generateLiveBriefing', () => {
 
     expect(result).toContain('"Only Distraction"');
     expect(result).toContain('B: 40.0');
-    expect(result).not.toContain('constitutional damage');
   });
 
-  it('includes Critical smokescreen when SI >= 50', () => {
+  it('includes Critical smokescreen with editorial language when SI >= 50', () => {
     const snapshot = makeSnapshot({ max_smokescreen_index: 65.0 });
     const topA = makeEvent({ title: 'Damage', a_score: 50.0 });
 
@@ -139,6 +151,7 @@ describe('generateLiveBriefing', () => {
 
     expect(result).toContain('Critical smokescreen activity detected');
     expect(result).toContain('SI: 65');
+    expect(result).toContain('displacing coverage');
   });
 
   it('includes Significant smokescreen when SI >= 25 and < 50', () => {
@@ -166,5 +179,21 @@ describe('generateLiveBriefing', () => {
     });
 
     expect(result).not.toContain('smokescreen');
+  });
+
+  it('notes imbalance when few List A but many List B events', () => {
+    const snapshot = makeSnapshot({ list_a_count: 3, list_b_count: 25, total_events: 30 });
+    const topA = makeEvent({ title: 'Damage', a_score: 50.0 });
+    const topB = makeEvent({ title: 'Distraction', b_score: 60.0, primary_list: 'B' });
+
+    const result = generateLiveBriefing({
+      snapshot,
+      topDamage: [topA],
+      topDistraction: [topB],
+    });
+
+    expect(result).toContain('distraction pattern');
+    expect(result).toContain('only 3 made the damage list');
+    expect(result).toContain('25 competed for attention');
   });
 });

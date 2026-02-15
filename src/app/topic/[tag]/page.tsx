@@ -69,10 +69,10 @@ export default async function TopicPage({ params }: TopicPageProps) {
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
         <div className="mb-4">
-          <h1 className="text-lg font-extrabold text-text-primary font-serif mb-0.5">
+          <h1 className="text-xl font-extrabold text-text-primary font-serif mb-0.5">
             #{decoded}
           </h1>
-          <p className="text-[11px] text-text-muted m-0">
+          <p className="text-[13px] text-text-muted m-0">
             {events.length} event{events.length !== 1 ? 's' : ''} across {weekGroups.size} week{weekGroups.size !== 1 ? 's' : ''}
           </p>
         </div>
@@ -89,7 +89,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
         )}
 
         {events.length === 0 ? (
-          <p className="text-text-dim text-xs">No events found with this topic tag.</p>
+          <p className="text-text-dim text-sm">No events found with this topic tag.</p>
         ) : (
           <div className="space-y-4">
             {sortedWeeks.map(([weekId, weekEvents]) => {
@@ -103,10 +103,10 @@ export default async function TopicPage({ params }: TopicPageProps) {
                     href={`/week/${weekId}`}
                     className="flex items-center gap-2 mb-1.5 no-underline group"
                   >
-                    <span className="text-[10px] font-bold tracking-widest text-text-dim group-hover:text-mixed transition-colors">
+                    <span className="text-[12px] font-bold tracking-widest text-text-dim group-hover:text-mixed transition-colors">
                       WEEK {weekNum}
                     </span>
-                    <span className="text-[10px] text-text-muted">{weekLabel}</span>
+                    <span className="text-[12px] text-text-muted">{weekLabel}</span>
                     <span className="flex-1 border-t border-surface-border" />
                   </Link>
 
@@ -122,12 +122,12 @@ export default async function TopicPage({ params }: TopicPageProps) {
                           <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className={`text-[8px] font-bold tracking-widest text-${color}`}>
+                                <span className={`text-[10px] font-bold tracking-widest text-${color}`}>
                                   {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
                                 </span>
-                                <span className="text-[9px] text-text-dim">{event.event_date}</span>
+                                <span className="text-[11px] text-text-dim">{event.event_date}</span>
                               </div>
-                              <div className="text-[12px] text-text-primary font-semibold leading-tight">
+                              <div className="text-sm text-text-primary font-semibold leading-tight">
                                 {event.title}
                               </div>
                               <MechanismBadge
@@ -157,10 +157,10 @@ export default async function TopicPage({ params }: TopicPageProps) {
 function StatChip({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div className="flex items-center gap-1">
-      <span className={`text-[10px] font-bold ${color ? `text-${color}` : 'text-text-dim'}`}>
+      <span className={`text-[12px] font-bold ${color ? `text-${color}` : 'text-text-dim'}`}>
         {value}
       </span>
-      <span className="text-[9px] text-text-muted">{label}</span>
+      <span className="text-[11px] text-text-muted">{label}</span>
     </div>
   );
 }

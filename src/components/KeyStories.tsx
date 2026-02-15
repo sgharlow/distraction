@@ -44,7 +44,7 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 py-2.5">
-      <div className="text-[9.5px] font-bold uppercase tracking-widest text-text-muted mb-2">
+      <div className="text-[11.5px] font-bold uppercase tracking-widest text-text-muted mb-2">
         This Week&apos;s Key Stories
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -54,14 +54,14 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
             href={`/event/${topDamage.id}`}
             className={`${cardStyles.damage.bg} border ${cardStyles.damage.border} ${cardStyles.damage.hoverBorder} rounded-lg p-3 no-underline transition-colors block`}
           >
-            <div className={`text-[9px] font-bold uppercase tracking-widest ${cardStyles.damage.text} mb-1`}>
+            <div className={`text-[11px] font-bold uppercase tracking-widest ${cardStyles.damage.text} mb-1`}>
               {cardStyles.damage.label}
             </div>
-            <div className="text-[13px] text-text-primary font-bold leading-tight mb-1.5 line-clamp-2">
+            <div className="text-[15px] text-text-primary font-bold leading-tight mb-1.5 line-clamp-2">
               {topDamage.title}
             </div>
             {topDamage.summary && (
-              <p className="text-[10.5px] text-text-dim leading-relaxed m-0 mb-2 line-clamp-2">
+              <p className="text-[12.5px] text-text-dim leading-relaxed m-0 mb-2 line-clamp-2">
                 {topDamage.summary}
               </p>
             )}
@@ -75,14 +75,14 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
             href={`/event/${topDistraction.id}`}
             className={`${cardStyles.distraction.bg} border ${cardStyles.distraction.border} ${cardStyles.distraction.hoverBorder} rounded-lg p-3 no-underline transition-colors block`}
           >
-            <div className={`text-[9px] font-bold uppercase tracking-widest ${cardStyles.distraction.text} mb-1`}>
+            <div className={`text-[11px] font-bold uppercase tracking-widest ${cardStyles.distraction.text} mb-1`}>
               {cardStyles.distraction.label}
             </div>
-            <div className="text-[13px] text-text-primary font-bold leading-tight mb-1.5 line-clamp-2">
+            <div className="text-[15px] text-text-primary font-bold leading-tight mb-1.5 line-clamp-2">
               {topDistraction.title}
             </div>
             {topDistraction.summary && (
-              <p className="text-[10.5px] text-text-dim leading-relaxed m-0 mb-2 line-clamp-2">
+              <p className="text-[12.5px] text-text-dim leading-relaxed m-0 mb-2 line-clamp-2">
                 {topDistraction.summary}
               </p>
             )}
@@ -96,17 +96,17 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
             href={`/smokescreen`}
             className={`${cardStyles.smokescreen.bg} border ${cardStyles.smokescreen.border} ${cardStyles.smokescreen.hoverBorder} rounded-lg p-3 no-underline transition-colors block`}
           >
-            <div className={`text-[9px] font-bold uppercase tracking-widest ${cardStyles.smokescreen.text} mb-1`}>
+            <div className={`text-[11px] font-bold uppercase tracking-widest ${cardStyles.smokescreen.text} mb-1`}>
               {cardStyles.smokescreen.label}
             </div>
-            <div className="text-[12px] text-distraction font-bold leading-tight mb-0.5">
+            <div className="text-sm text-distraction font-bold leading-tight mb-0.5">
               {topSmokescreenPair.pair.distraction_event.title}
             </div>
-            <div className="text-[9.5px] text-text-dim mb-0.5">is obscuring</div>
-            <div className="text-[12px] text-damage font-bold leading-tight mb-1.5">
+            <div className="text-[11.5px] text-text-dim mb-0.5">is obscuring</div>
+            <div className="text-sm text-damage font-bold leading-tight mb-1.5">
               {topSmokescreenPair.pair.damage_event.title}
             </div>
-            <div className="text-[10px] font-mono text-mixed">
+            <div className="text-[12px] font-mono text-mixed">
               SI: {topSmokescreenPair.pair.smokescreen_index.toFixed(1)}
             </div>
           </Link>

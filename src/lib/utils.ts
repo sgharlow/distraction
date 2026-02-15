@@ -25,6 +25,20 @@ export function listColor(list: 'A' | 'B' | 'C'): string {
 }
 
 /**
+ * Format a week-over-week delta as "+3", "−2", or "—" when data is missing.
+ */
+export function fmtDelta(
+  current: number | null | undefined,
+  prior: number | null | undefined,
+  decimals = 0,
+): string {
+  if (current == null || prior == null) return '—';
+  const diff = current - prior;
+  const sign = diff > 0 ? '+' : '';
+  return `${sign}${diff.toFixed(decimals)}`;
+}
+
+/**
  * Get a human-readable severity label for a score value.
  */
 export function getSeverityLabel(score: number | null): string {

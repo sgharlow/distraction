@@ -47,7 +47,7 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
 
   const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(fullUrl)}`;
 
-  const btnClass = 'bg-transparent border border-surface-border text-text-dim text-[10px] px-2.5 py-1 rounded hover:text-text-muted hover:border-surface-border-light transition-colors cursor-pointer';
+  const btnClass = 'bg-white/[0.04] border border-surface-border text-text-muted text-[12px] px-2.5 py-1 rounded hover:text-text-primary hover:border-surface-border-light transition-colors cursor-pointer';
 
   return (
     <div className="flex gap-1.5 items-center">

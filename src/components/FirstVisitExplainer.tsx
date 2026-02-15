@@ -29,10 +29,10 @@ export function FirstVisitExplainer() {
       <div className="max-w-[1200px] mx-auto px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="text-[9.5px] font-bold uppercase tracking-widest text-mixed mb-1">
+            <div className="text-[11.5px] font-bold uppercase tracking-widest text-mixed mb-1">
               What is the Distraction Index?
             </div>
-            <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">
+            <p className="text-[13.5px] text-text-secondary leading-relaxed m-0">
               Every event gets two scores: <strong className="text-damage">A-score</strong> measures
               real constitutional damage (institutional erosion, rule-of-law threats),
               while <strong className="text-distraction">B-score</strong> measures manufactured media
@@ -47,7 +47,7 @@ export function FirstVisitExplainer() {
           </div>
           <button
             onClick={handleDismiss}
-            className="text-[10px] px-2.5 py-1 rounded border border-mixed/20 text-mixed hover:bg-mixed/10 transition-colors cursor-pointer bg-transparent whitespace-nowrap"
+            className="text-[12px] px-2.5 py-1 rounded border border-mixed/20 text-mixed hover:bg-mixed/10 transition-colors cursor-pointer bg-mixed/[0.06] whitespace-nowrap"
           >
             Got it
           </button>

@@ -55,10 +55,10 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
       <main className="max-w-[860px] mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-lg font-extrabold text-text-primary font-serif mb-0.5">
+            <h1 className="text-xl font-extrabold text-text-primary font-serif mb-0.5">
               Timeline
             </h1>
-            <p className="text-[11px] text-text-muted m-0">
+            <p className="text-[13px] text-text-muted m-0">
               All scored events across all weeks, newest first.
             </p>
           </div>
@@ -73,7 +73,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
         </div>
 
         {sortedWeeks.length === 0 ? (
-          <p className="text-text-dim text-xs">No events found.</p>
+          <p className="text-text-dim text-sm">No events found.</p>
         ) : (
           <div className="space-y-4">
             {sortedWeeks.map(([weekId, weekEvents]) => {
@@ -88,14 +88,14 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                     href={`/week/${weekId}`}
                     className="flex items-center gap-2 mb-1.5 no-underline group"
                   >
-                    <span className="text-[10px] font-bold tracking-widest text-text-dim group-hover:text-mixed transition-colors">
+                    <span className="text-[12px] font-bold tracking-widest text-text-dim group-hover:text-mixed transition-colors">
                       WEEK {weekNum}
                     </span>
-                    <span className="text-[10px] text-text-muted">
+                    <span className="text-[12px] text-text-muted">
                       {weekLabel}
                     </span>
                     <span className="flex-1 border-t border-surface-border" />
-                    <span className="text-[9px] text-text-dim">
+                    <span className="text-[11px] text-text-dim">
                       {weekEvents.length} events
                     </span>
                   </Link>
@@ -113,14 +113,14 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                           <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className={`text-[8px] font-bold tracking-widest text-${color}`}>
+                                <span className={`text-[10px] font-bold tracking-widest text-${color}`}>
                                   {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
                                 </span>
-                                <span className="text-[9px] text-text-dim">
+                                <span className="text-[11px] text-text-dim">
                                   {event.event_date}
                                 </span>
                               </div>
-                              <div className="text-[12px] text-text-primary font-semibold leading-tight">
+                              <div className="text-sm text-text-primary font-semibold leading-tight">
                                 {event.title}
                               </div>
                               <MechanismBadge
@@ -157,7 +157,7 @@ function FilterChip({ href, label, active, color }: { href: string; label: strin
   return (
     <Link
       href={href}
-      className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold no-underline transition-colors ${activeClass}`}
+      className={`px-2.5 py-1 rounded-full border text-[12px] font-semibold no-underline transition-colors ${activeClass}`}
     >
       {label}
     </Link>

@@ -50,3 +50,7 @@ scripts/.backfill-state.json
 
 # supabase temp
 supabase/.temp/
+
+# outreach (contains PII — emails, phones, addresses)
+OUTREACH.md
+outreach-contacts.csv

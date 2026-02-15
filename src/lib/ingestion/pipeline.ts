@@ -221,17 +221,11 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
     // 4b. Post-clustering merge: deduplicate similar event titles
     const identifiedEvents = mergeIdentifiedEvents(rawIdentifiedEvents, existingEventTitles);
 
-    // 5. Create and score new events (limited by time budget)
+    // 5. Create new events (creation is fast — do all of them)
     let eventsCreated = 0;
-    let eventsScored = 0;
-    const MAX_EVENTS_PER_RUN = 2;
+    const createdEvents: Array<{ id: string; identified: typeof identifiedEvents[0]; articleHeadlines: string[] }> = [];
 
     for (const identified of identifiedEvents) {
-      if (!hasTime()) {
-        errors.push(`Time budget exceeded — ${identifiedEvents.length - eventsCreated} events deferred`);
-        break;
-      }
-
       try {
         // Check if this event matches an existing one (token similarity catches paraphrased titles)
         const isExisting = existingEventTitles.some(
@@ -276,76 +270,94 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
             .in('url', articleUrls);
         }
 
-        // Score the event (if we have time and haven't hit the limit)
-        if (eventsScored >= MAX_EVENTS_PER_RUN || !hasTime()) {
-          errors.push(`Scoring deferred for "${identified.title}"`);
-          continue;
-        }
-
         const articleHeadlines = identified.article_indices
           .filter((i) => i < newArticles.length)
           .map((i) => newArticles[i].headline);
 
-        const { result: scoreResult, tokens: scoreTokens, prompt_version } =
-          await scoreEvent({
-            title: identified.title,
-            summary: identified.summary,
-            mechanism: identified.mechanism_of_harm,
-            scope: identified.scope,
-            affected_population: identified.affected_population,
-            articleHeadlines,
-            weekEventTitles: existingEventTitles,
-          });
-
-        totalInput += scoreTokens.input;
-        totalOutput += scoreTokens.output;
-
-        // Update event with scores
-        await supabase
-          .from('events')
-          .update({
-            a_score: scoreResult.a_score.final_score,
-            a_components: scoreResult.a_score as object,
-            a_severity_multiplier:
-              (scoreResult.a_score.severity.durability +
-                scoreResult.a_score.severity.reversibility +
-                scoreResult.a_score.severity.precedent) /
-              3,
-            b_score: scoreResult.b_score.final_score,
-            b_layer1_hype: scoreResult.b_score.layer1 as object,
-            b_layer2_distraction: scoreResult.b_score.layer2 as object,
-            b_intentionality_score: scoreResult.b_score.intentionality.total,
-            primary_list: scoreResult.primary_list,
-            is_mixed: scoreResult.is_mixed,
-            noise_flag: scoreResult.noise_flag,
-            noise_reason_codes: scoreResult.noise_reason_codes,
-            confidence: scoreResult.confidence,
-            score_rationale: scoreResult.score_rationale,
-            action_item: scoreResult.action_item,
-            factual_claims: scoreResult.factual_claims as object,
-            article_count: articleHeadlines.length,
-          })
-          .eq('id', newEvent.id);
-
-        // Log score change
-        await supabase.from('score_changes').insert({
-          event_id: newEvent.id,
-          week_id: currentWeekId,
-          changed_by: 'auto',
-          change_type: 'initial',
-          new_a_score: scoreResult.a_score.final_score,
-          new_b_score: scoreResult.b_score.final_score,
-          new_list: scoreResult.primary_list,
-          reason: 'Initial automated scoring',
-          version_after: 1,
-          prompt_version,
-          llm_response: scoreResult as object,
-        });
-
-        eventsScored++;
+        createdEvents.push({ id: newEvent.id, identified, articleHeadlines });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`Event scoring error for "${identified.title}": ${msg}`);
+        errors.push(`Event create error for "${identified.title}": ${msg}`);
+      }
+    }
+
+    // 5b. Score events in parallel (up to 4 concurrent, within time budget)
+    const MAX_PARALLEL_SCORES = 4;
+    let eventsScored = 0;
+    const eventsToScore = createdEvents.slice(0, hasTime() ? MAX_PARALLEL_SCORES : 0);
+    const deferredCount = createdEvents.length - eventsToScore.length;
+    if (deferredCount > 0) {
+      errors.push(`Scoring deferred for ${deferredCount} events (will score next cycle)`);
+    }
+
+    if (eventsToScore.length > 0) {
+      const scoreResults = await Promise.allSettled(
+        eventsToScore.map(async ({ id, identified, articleHeadlines }) => {
+          const { result: scoreResult, tokens: scoreTokens, prompt_version } =
+            await scoreEvent({
+              title: identified.title,
+              summary: identified.summary,
+              mechanism: identified.mechanism_of_harm,
+              scope: identified.scope,
+              affected_population: identified.affected_population,
+              articleHeadlines,
+              weekEventTitles: existingEventTitles,
+            });
+
+          // Update event with scores
+          await supabase
+            .from('events')
+            .update({
+              a_score: scoreResult.a_score.final_score,
+              a_components: scoreResult.a_score as object,
+              a_severity_multiplier:
+                (scoreResult.a_score.severity.durability +
+                  scoreResult.a_score.severity.reversibility +
+                  scoreResult.a_score.severity.precedent) /
+                3,
+              b_score: scoreResult.b_score.final_score,
+              b_layer1_hype: scoreResult.b_score.layer1 as object,
+              b_layer2_distraction: scoreResult.b_score.layer2 as object,
+              b_intentionality_score: scoreResult.b_score.intentionality.total,
+              primary_list: scoreResult.primary_list,
+              is_mixed: scoreResult.is_mixed,
+              noise_flag: scoreResult.noise_flag,
+              noise_reason_codes: scoreResult.noise_reason_codes,
+              confidence: scoreResult.confidence,
+              score_rationale: scoreResult.score_rationale,
+              action_item: scoreResult.action_item,
+              factual_claims: scoreResult.factual_claims as object,
+              article_count: articleHeadlines.length,
+            })
+            .eq('id', id);
+
+          // Log score change
+          await supabase.from('score_changes').insert({
+            event_id: id,
+            week_id: currentWeekId,
+            changed_by: 'auto',
+            change_type: 'initial',
+            new_a_score: scoreResult.a_score.final_score,
+            new_b_score: scoreResult.b_score.final_score,
+            new_list: scoreResult.primary_list,
+            reason: 'Initial automated scoring',
+            version_after: 1,
+            prompt_version,
+            llm_response: scoreResult as object,
+          });
+
+          return scoreTokens;
+        }),
+      );
+
+      for (const result of scoreResults) {
+        if (result.status === 'fulfilled') {
+          totalInput += result.value.input;
+          totalOutput += result.value.output;
+          eventsScored++;
+        } else {
+          errors.push(`Scoring error: ${result.reason}`);
+        }
       }
     }
 

@@ -23,3 +23,14 @@ export function listColor(list: 'A' | 'B' | 'C'): string {
     case 'C': return 'noise';
   }
 }
+
+/**
+ * Get a human-readable severity label for a score value.
+ */
+export function getSeverityLabel(score: number | null): string {
+  const s = score ?? 0;
+  if (s >= 70) return 'Critical';
+  if (s >= 50) return 'Significant';
+  if (s >= 30) return 'Moderate';
+  return 'Low';
+}

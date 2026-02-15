@@ -131,7 +131,7 @@ export default async function EventPage({ params }: EventPageProps) {
         {/* Dual score display */}
         {!isNoise && (
           <div className="mb-4">
-            <DualScore aScore={event.a_score} bScore={event.b_score} size="lg" />
+            <DualScore aScore={event.a_score} bScore={event.b_score} size="lg" showLabels showSeverity />
             <div className="mt-1">
               <AttentionBudget aScore={event.a_score} bScore={event.b_score} />
             </div>

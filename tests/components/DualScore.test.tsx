@@ -37,4 +37,50 @@ describe('DualScore', () => {
     const { container } = render(<DualScore aScore={50} bScore={30} size="lg" />);
     expect(container.firstChild).toBeTruthy();
   });
+
+  // Backward compatibility — new props default to false
+  it('does not show labels or severity by default', () => {
+    render(<DualScore aScore={50} bScore={30} />);
+    expect(screen.queryByText('Constitutional Damage')).not.toBeInTheDocument();
+    expect(screen.queryByText('Media Hype')).not.toBeInTheDocument();
+    expect(screen.queryByText('Significant')).not.toBeInTheDocument();
+  });
+
+  // showLabels prop
+  it('renders "Constitutional Damage" and "Media Hype" when showLabels is true', () => {
+    render(<DualScore aScore={50} bScore={30} showLabels />);
+    expect(screen.getByText('Constitutional Damage')).toBeInTheDocument();
+    expect(screen.getByText('Media Hype')).toBeInTheDocument();
+  });
+
+  // showSeverity prop — each threshold band
+  it('renders severity label "Critical" for score >= 70', () => {
+    render(<DualScore aScore={75} bScore={80} showSeverity />);
+    const criticals = screen.getAllByText('Critical');
+    expect(criticals).toHaveLength(2);
+  });
+
+  it('renders severity label "Significant" for score >= 50', () => {
+    render(<DualScore aScore={55} bScore={60} showSeverity />);
+    const significants = screen.getAllByText('Significant');
+    expect(significants).toHaveLength(2);
+  });
+
+  it('renders severity label "Moderate" for score >= 30', () => {
+    render(<DualScore aScore={35} bScore={40} showSeverity />);
+    const moderates = screen.getAllByText('Moderate');
+    expect(moderates).toHaveLength(2);
+  });
+
+  it('renders severity label "Low" for score < 30', () => {
+    render(<DualScore aScore={10} bScore={20} showSeverity />);
+    const lows = screen.getAllByText('Low');
+    expect(lows).toHaveLength(2);
+  });
+
+  it('does not render severity for null scores even when showSeverity is true', () => {
+    render(<DualScore aScore={null} bScore={null} showSeverity />);
+    expect(screen.queryByText('Low')).not.toBeInTheDocument();
+    expect(screen.queryByText('Moderate')).not.toBeInTheDocument();
+  });
 });

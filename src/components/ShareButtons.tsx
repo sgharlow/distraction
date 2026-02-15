@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://distractionindex.org';
+
 interface ShareButtonsProps {
   url: string;
   title: string;
@@ -11,17 +13,19 @@ interface ShareButtonsProps {
 export function ShareButtons({ url, title, description }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [hasWebShare, setHasWebShare] = useState(false);
+  const [origin, setOrigin] = useState(SITE_URL);
 
   // Check for Web Share API on mount (client-side only)
   useEffect(() => {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       setHasWebShare(true);
     }
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
+    }
   }, []);
 
-  const fullUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}${url}`
-    : url;
+  const fullUrl = `${origin}${url}`;
 
   const handleCopy = useCallback(async () => {
     try {

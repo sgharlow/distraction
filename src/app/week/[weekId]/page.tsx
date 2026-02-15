@@ -5,12 +5,15 @@ import { getAllWeekSnapshots } from '@/lib/data/weeks';
 import { notFound } from 'next/navigation';
 
 import { TopNav } from '@/components/TopNav';
+import { FirstVisitExplainer } from '@/components/FirstVisitExplainer';
 import { WeekSelector } from '@/components/WeekSelector';
 import { WeekStatsBar } from '@/components/WeekStatsBar';
 import { WeekSummary } from '@/components/WeekSummary';
 import { SmokescreenAlert } from '@/components/SmokescreenAlert';
 import { NarrativeStrips } from '@/components/NarrativeStrips';
 import { ListColumn } from '@/components/ListColumn';
+import { KeyStories } from '@/components/KeyStories';
+import { FullIndexToggle } from '@/components/FullIndexToggle';
 import { WeekBriefing } from '@/components/WeekBriefing';
 import { ShareButtons } from '@/components/ShareButtons';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
@@ -72,6 +75,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
   return (
     <div className="min-h-screen">
       <TopNav />
+      <FirstVisitExplainer />
       <main>
 
       {/* Week selector — needs all weeks for navigation */}
@@ -111,14 +115,25 @@ export default async function WeekPage({ params }: WeekPageProps) {
             topDistraction={weekData.events.B}
           />
 
+          {/* Key stories — top damage, distraction, smokescreen */}
+          <KeyStories
+            topDamage={weekData.events.A[0] ?? null}
+            topDistraction={weekData.events.B[0] ?? null}
+            topSmokescreenPair={
+              weekData.smokescreenPairs[0]?.smokescreen_index >= 25
+                ? { pair: weekData.smokescreenPairs[0] }
+                : null
+            }
+          />
+
           {/* Three-column dashboard */}
-          <div className="max-w-[1200px] mx-auto px-4 py-2.5">
+          <FullIndexToggle>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               <ListColumn list="A" events={weekData.events.A} />
               <ListColumn list="B" events={weekData.events.B} />
               <ListColumn list="C" events={weekData.events.C} />
             </div>
-          </div>
+          </FullIndexToggle>
 
           {/* Newsletter signup */}
           <NewsletterSignup />

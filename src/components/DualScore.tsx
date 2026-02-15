@@ -1,12 +1,14 @@
-import { cn } from '@/lib/utils';
+import { cn, getSeverityLabel } from '@/lib/utils';
 
 interface DualScoreProps {
   aScore: number | null;
   bScore: number | null;
   size?: 'sm' | 'lg';
+  showLabels?: boolean;
+  showSeverity?: boolean;
 }
 
-export function DualScore({ aScore, bScore, size = 'sm' }: DualScoreProps) {
+export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, showSeverity = false }: DualScoreProps) {
   const a = aScore ?? 0;
   const b = bScore ?? 0;
   const aUp = a >= b;
@@ -41,6 +43,16 @@ export function DualScore({ aScore, bScore, size = 'sm' }: DualScoreProps) {
         >
           {aScore?.toFixed(1) ?? '—'}
         </div>
+        {showLabels && (
+          <div className="text-[8px] text-damage opacity-50 leading-tight">
+            Constitutional Damage
+          </div>
+        )}
+        {showSeverity && aScore != null && (
+          <div className="text-[8.5px] font-bold text-damage leading-tight mt-0.5">
+            {getSeverityLabel(aScore)}
+          </div>
+        )}
       </div>
 
       {/* B score */}
@@ -70,6 +82,16 @@ export function DualScore({ aScore, bScore, size = 'sm' }: DualScoreProps) {
         >
           {bScore?.toFixed(1) ?? '—'}
         </div>
+        {showLabels && (
+          <div className="text-[8px] text-distraction opacity-50 leading-tight">
+            Media Hype
+          </div>
+        )}
+        {showSeverity && bScore != null && (
+          <div className="text-[8.5px] font-bold text-distraction leading-tight mt-0.5">
+            {getSeverityLabel(bScore)}
+          </div>
+        )}
       </div>
     </div>
   );

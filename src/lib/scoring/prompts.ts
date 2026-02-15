@@ -20,6 +20,12 @@ Given a batch of recent US political news articles, identify distinct EVENTS. Mu
 - Presidential social media activity and public statements
 - Manufactured controversies and distractions
 
+CRITICAL MERGE RULES:
+- If two or more articles describe the same executive order, lawsuit, ruling, or policy action, they MUST be a single event regardless of headline differences.
+- If an article is a follow-up, reaction, or consequence of an existing tracked event, assign it to that existing event rather than creating a new one.
+- When "Events already tracked this week" are provided, you MUST assign articles to existing events if they cover the same underlying action. Only create a new event if the article describes a genuinely distinct action.
+- Err on the side of merging. Two events should only be separate if they involve different policy actions, different court cases, or different institutional mechanisms.
+
 Do NOT create events for:
 - Routine legislative business unrelated to the administration
 - Foreign policy that doesn't involve democratic institutions

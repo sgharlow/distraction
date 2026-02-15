@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { createClient } from '@/lib/supabase/server';
 
@@ -41,7 +42,22 @@ export default async function CorrectionsPage() {
         </p>
 
         {items.length === 0 ? (
-          <p className="text-sm text-text-dim">No corrections have been issued.</p>
+          <div className="bg-surface-raised border border-surface-border rounded-lg p-5 text-center">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">
+              No Corrections
+            </div>
+            <p className="text-[11.5px] text-text-dim leading-relaxed m-0 mb-2">
+              Corrections appear here when frozen weekly editions require
+              factual corrections. Once a week is frozen, scores are immutable —
+              but factual errors can be noted as append-only corrections.
+            </p>
+            <Link
+              href="/week/current"
+              className="text-[10.5px] text-mixed hover:underline no-underline"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         ) : (
           <div className="space-y-2">
             {items.map((item) => (

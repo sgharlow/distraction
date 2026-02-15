@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn, fmtScore, listColor } from '@/lib/utils';
+import { cn, fmtScore, listColor, getSeverityLabel } from '@/lib/utils';
 
 describe('cn (class names utility)', () => {
   it('joins multiple class names', () => {
@@ -76,5 +76,32 @@ describe('listColor', () => {
 
   it('returns "noise" for List C', () => {
     expect(listColor('C')).toBe('noise');
+  });
+});
+
+describe('getSeverityLabel', () => {
+  it('returns "Critical" for scores >= 70', () => {
+    expect(getSeverityLabel(70)).toBe('Critical');
+    expect(getSeverityLabel(85)).toBe('Critical');
+    expect(getSeverityLabel(100)).toBe('Critical');
+  });
+
+  it('returns "Significant" for scores >= 50 and < 70', () => {
+    expect(getSeverityLabel(50)).toBe('Significant');
+    expect(getSeverityLabel(65)).toBe('Significant');
+  });
+
+  it('returns "Moderate" for scores >= 30 and < 50', () => {
+    expect(getSeverityLabel(30)).toBe('Moderate');
+    expect(getSeverityLabel(45)).toBe('Moderate');
+  });
+
+  it('returns "Low" for scores < 30', () => {
+    expect(getSeverityLabel(0)).toBe('Low');
+    expect(getSeverityLabel(29)).toBe('Low');
+  });
+
+  it('treats null as 0 (Low)', () => {
+    expect(getSeverityLabel(null)).toBe('Low');
   });
 });

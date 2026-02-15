@@ -52,7 +52,7 @@ export async function clusterArticlesIntoEvents(
     // Add context about existing events if available
     let userPrompt = EVENT_IDENTIFICATION_USER(articleText);
     if (existingEventTitles.length > 0) {
-      userPrompt += `\n\nEvents already tracked this week (assign to these if articles match, or create new):\n${existingEventTitles.map((t) => `- ${t}`).join('\n')}`;
+      userPrompt += `\n\nIMPORTANT — Events already tracked this week. You MUST assign articles to these existing events if they cover the same underlying action. Only create a new event if it is genuinely distinct:\n${existingEventTitles.map((t) => `- ${t}`).join('\n')}`;
     }
 
     const response = await callHaiku(EVENT_IDENTIFICATION_SYSTEM, userPrompt, 4096);

@@ -112,12 +112,29 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         </div>
 
         <p className="text-[11.5px] text-text-muted mb-4 leading-relaxed">
-          Events with high constitutional damage but low media attention
-          (Attention Budget &lt; −30).
+          These are events where constitutional damage (A-score) far exceeds
+          the media attention they receive (B-score). An Attention Budget below
+          −30 means the event is getting significantly less coverage than its
+          real-world impact warrants — the public should know more about these.
         </p>
 
         {undercovered.length === 0 ? (
-          <p className="text-text-dim text-xs">No undercovered events this week.</p>
+          <div className="bg-surface-raised border border-surface-border rounded-lg p-5 text-center">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">
+              No Undercovered Events
+            </div>
+            <p className="text-[11.5px] text-text-dim leading-relaxed m-0 mb-2">
+              No List A events this week have an Attention Budget below −30.
+              This means high-damage events are receiving proportionate media
+              coverage — or no events have been scored yet.
+            </p>
+            <Link
+              href="/week/current"
+              className="text-[10.5px] text-mixed hover:underline no-underline"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         ) : (
           <div className="space-y-1.5">
             {undercovered.map((event) => (

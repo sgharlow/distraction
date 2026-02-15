@@ -4,32 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { ArticleInput } from './types';
-
-/**
- * Simple Levenshtein distance between two strings (normalized to 0-1 similarity).
- */
-function similarity(a: string, b: string): number {
-  const la = a.toLowerCase().trim();
-  const lb = b.toLowerCase().trim();
-  if (la === lb) return 1;
-  if (la.length === 0 || lb.length === 0) return 0;
-
-  const maxLen = Math.max(la.length, lb.length);
-  if (maxLen === 0) return 1;
-
-  // Use token overlap for speed (faster than Levenshtein for headlines)
-  const tokensA = new Set(la.split(/\s+/).filter((t) => t.length > 2));
-  const tokensB = new Set(lb.split(/\s+/).filter((t) => t.length > 2));
-
-  if (tokensA.size === 0 || tokensB.size === 0) return 0;
-
-  let overlap = 0;
-  for (const t of tokensA) {
-    if (tokensB.has(t)) overlap++;
-  }
-
-  return overlap / Math.max(tokensA.size, tokensB.size);
-}
+import { tokenSimilarity } from './similarity';
 
 /**
  * Normalize a URL for dedup: strip protocol, www, trailing slashes, query params.
@@ -54,7 +29,7 @@ function normalizeUrl(url: string): string {
 export function deduplicateArticles(
   articles: ArticleInput[],
   existingUrls: Set<string>,
-  headlineSimilarityThreshold = 0.8,
+  headlineSimilarityThreshold = 0.7,
 ): ArticleInput[] {
   const normalizedExisting = new Set(
     Array.from(existingUrls).map(normalizeUrl),
@@ -74,7 +49,7 @@ export function deduplicateArticles(
 
     // Skip if headline is too similar to one we've already included
     const isDupeHeadline = seenHeadlines.some(
-      (h) => similarity(h, article.headline) >= headlineSimilarityThreshold,
+      (h) => tokenSimilarity(h, article.headline) >= headlineSimilarityThreshold,
     );
     if (isDupeHeadline) continue;
 

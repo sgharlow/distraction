@@ -10,6 +10,7 @@ import { fetchGNewsRecent } from './gnews';
 import { fetchGoogleNewsRecent } from './google-news';
 import { deduplicateArticles } from './dedup';
 import { clusterArticlesIntoEvents } from './cluster';
+import { mergeIdentifiedEvents } from './merge-events';
 import { scoreEvent } from '@/lib/scoring/service';
 import { pairSmokescreens } from '@/lib/scoring/service';
 import { getWeekIdForDate } from '@/lib/weeks';
@@ -209,10 +210,13 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
     const existingEventTitles = (existingEvents || []).map((e) => e.title);
 
     // 4. Cluster articles into events (1 Claude Haiku call)
-    const { events: identifiedEvents, tokens: clusterTokens } =
+    const { events: rawIdentifiedEvents, tokens: clusterTokens } =
       await clusterArticlesIntoEvents(newArticles, existingEventTitles);
     totalInput += clusterTokens.input;
     totalOutput += clusterTokens.output;
+
+    // 4b. Post-clustering merge: deduplicate similar event titles
+    const identifiedEvents = mergeIdentifiedEvents(rawIdentifiedEvents, existingEventTitles);
 
     // 5. Create and score new events (limited by time budget)
     let eventsCreated = 0;

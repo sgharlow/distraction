@@ -11,6 +11,9 @@ import { WeekSummary } from '@/components/WeekSummary';
 import { SmokescreenAlert } from '@/components/SmokescreenAlert';
 import { NarrativeStrips } from '@/components/NarrativeStrips';
 import { ListColumn } from '@/components/ListColumn';
+import { WeekBriefing } from '@/components/WeekBriefing';
+import { ShareButtons } from '@/components/ShareButtons';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 
 interface WeekPageProps {
   params: Promise<{ weekId: string }>;
@@ -76,6 +79,13 @@ export default async function WeekPage({ params }: WeekPageProps) {
         <WeekSelector allWeeks={allWeeks} currentSnapshot={snapshot} />
       )}
 
+      {/* Share buttons */}
+      {snapshot && (
+        <div className="max-w-[1200px] mx-auto px-4 flex justify-end py-1">
+          <ShareButtons url={`/week/${wid}`} title={`Distraction Index — Week ${getWeekNumber(weekStart)}: ${getWeekLabel(weekStart)}`} />
+        </div>
+      )}
+
       {/* Smokescreen alert */}
       {snapshot && <SmokescreenAlert snapshot={snapshot} />}
 
@@ -88,6 +98,13 @@ export default async function WeekPage({ params }: WeekPageProps) {
       {/* Main content */}
       {weekData ? (
         <>
+          {/* Live briefing (live weeks only — mutually exclusive with frozen WeekSummary) */}
+          <WeekBriefing
+            snapshot={weekData.snapshot}
+            topDamage={weekData.events.A}
+            topDistraction={weekData.events.B}
+          />
+
           {/* Narrative strips */}
           <NarrativeStrips
             topDamage={weekData.events.A}
@@ -102,6 +119,9 @@ export default async function WeekPage({ params }: WeekPageProps) {
               <ListColumn list="C" events={weekData.events.C} />
             </div>
           </div>
+
+          {/* Newsletter signup */}
+          <NewsletterSignup />
         </>
       ) : (
         /* Empty state */

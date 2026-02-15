@@ -10,6 +10,7 @@ import { MechanismBadge } from '@/components/MechanismBadge';
 import { FrozenBadge } from '@/components/FrozenBadge';
 import { ActionItem } from '@/components/ActionItem';
 import { ScoreBar } from '@/components/ScoreBar';
+import { ShareButtons } from '@/components/ShareButtons';
 import {
   A_DRIVER_KEYS,
   A_DRIVER_LABELS,
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
       type: 'article',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${event.title} | The Distraction Index`,
       description,
     },
@@ -115,6 +116,15 @@ export default async function EventPage({ params }: EventPageProps) {
                 #{tag}
               </Link>
             ))}
+          </div>
+
+          {/* Share buttons */}
+          <div className="mt-2">
+            <ShareButtons
+              url={`/event/${event.id}`}
+              title={event.title}
+              description={`${listLabel} — A: ${event.a_score?.toFixed(1) ?? '—'} / B: ${event.b_score?.toFixed(1) ?? '—'}`}
+            />
           </div>
         </div>
 

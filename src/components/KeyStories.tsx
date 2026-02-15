@@ -65,6 +65,9 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
                 {topDamage.summary}
               </p>
             )}
+            <div className="text-[11.5px] text-text-dim mb-1">
+              {topDamage.article_count} {topDamage.article_count === 1 ? 'source' : 'sources'}
+            </div>
             <DualScore aScore={topDamage.a_score} bScore={topDamage.b_score} showLabels />
           </Link>
         )}
@@ -86,6 +89,9 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
                 {topDistraction.summary}
               </p>
             )}
+            <div className="text-[11.5px] text-text-dim mb-1">
+              {topDistraction.article_count} {topDistraction.article_count === 1 ? 'source' : 'sources'}
+            </div>
             <DualScore aScore={topDistraction.a_score} bScore={topDistraction.b_score} showLabels />
           </Link>
         )}

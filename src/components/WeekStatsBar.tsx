@@ -52,16 +52,6 @@ export function WeekStatsBar({ snapshot, priorSnapshot }: WeekStatsBarProps) {
       color: 'text-distraction',
       delta: prior ? fmtDelta(snapshot.avg_b_score, prior.avg_b_score, 1) : undefined,
     },
-    {
-      label: 'Sources',
-      value: snapshot.total_sources,
-      delta: prior ? fmtDelta(snapshot.total_sources, prior.total_sources) : undefined,
-    },
-    {
-      label: 'Primary Docs',
-      value: snapshot.primary_doc_count,
-      delta: prior ? fmtDelta(snapshot.primary_doc_count, prior.primary_doc_count) : undefined,
-    },
   ];
 
   return (

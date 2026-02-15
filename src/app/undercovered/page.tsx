@@ -143,6 +143,9 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
                       scope={event.scope}
                       affectedPopulation={event.affected_population}
                     />
+                    <span className="text-[11.5px] text-text-dim">
+                      {event.article_count} {event.article_count === 1 ? 'source' : 'sources'}
+                    </span>
                   </div>
                   <div className="text-right min-w-[90px]">
                     <DualScore aScore={event.a_score} bScore={event.b_score} />
@@ -181,6 +184,9 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
                       scope={event.scope}
                       affectedPopulation={event.affected_population}
                     />
+                    <span className="text-[11.5px] text-text-dim">
+                      {event.article_count} {event.article_count === 1 ? 'source' : 'sources'}
+                    </span>
                   </div>
                   <div className="text-right min-w-[90px]">
                     <DualScore aScore={event.a_score} bScore={event.b_score} />

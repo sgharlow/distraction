@@ -11,6 +11,8 @@ import { fetchGoogleNewsRecent } from './google-news';
 import { deduplicateArticles } from './dedup';
 import { clusterArticlesIntoEvents } from './cluster';
 import { mergeIdentifiedEvents } from './merge-events';
+import { tokenSimilarity } from './similarity';
+import { classifySource } from './classify-source';
 import { scoreEvent } from '@/lib/scoring/service';
 import { pairSmokescreens } from '@/lib/scoring/service';
 import { getWeekIdForDate } from '@/lib/weeks';
@@ -90,7 +92,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     const newArticles = deduplicateArticles(allArticles, existingUrls);
     const articlesNew = newArticles.length;
 
-    // 6. Store new articles
+    // 6. Store new articles with source_type classification
     if (newArticles.length > 0) {
       const articleInserts = newArticles.map((a) => ({
         url: a.url,
@@ -99,6 +101,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
         published_at: a.published_at,
         week_id: currentWeekId,
         ingestion_source: a.source,
+        source_type: classifySource(a.url, a.publisher),
       }));
 
       const { error: articleError } = await supabase
@@ -230,9 +233,9 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
       }
 
       try {
-        // Check if this event matches an existing one
+        // Check if this event matches an existing one (token similarity catches paraphrased titles)
         const isExisting = existingEventTitles.some(
-          (t) => t.toLowerCase() === identified.title.toLowerCase(),
+          (t) => tokenSimilarity(t, identified.title) >= 0.65,
         );
         if (isExisting) continue;
 

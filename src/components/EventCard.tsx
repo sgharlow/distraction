@@ -50,6 +50,11 @@ export function EventCard({ event, list, rank }: EventCardProps) {
           </div>
           <div className="flex gap-1.5 items-center mt-px flex-wrap">
             <span className="text-[11.5px] text-text-dim">{event.event_date}</span>
+            {event.article_count > 0 && (
+              <span className="text-[11.5px] text-text-dim">
+                · {event.article_count} {event.article_count === 1 ? 'source' : 'sources'}
+              </span>
+            )}
             {!isNoise && <AttentionBudget aScore={event.a_score} bScore={event.b_score} />}
           </div>
         </div>

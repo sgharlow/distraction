@@ -21,6 +21,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { addDays, format, isAfter } from 'date-fns';
 import * as fs from 'fs';
 import * as path from 'path';
+import { classifySource } from '../src/lib/ingestion/classify-source';
 
 // ── Config ──
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -416,14 +417,15 @@ async function processWeek(
   }
 
   // Insert articles into database first (so we can link them)
-  console.log(`  Inserting ${Math.min(articles.length, 200)} articles...`);
-  const articleInserts = articles.slice(0, 200).map((a) => ({
+  console.log(`  Inserting ${articles.length} articles...`);
+  const articleInserts = articles.map((a) => ({
     url: a.url,
     headline: a.title,
     publisher: a.domain,
     published_at: `${a.date}T12:00:00Z`,
     week_id: weekId,
     ingestion_source: 'gdelt' as const,
+    source_type: classifySource(a.url, a.domain),
   }));
 
   const { data: insertedArticles } = await supabase

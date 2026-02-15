@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 type Status = 'idle' | 'submitting' | 'subscribed' | 'already_subscribed' | 'error';
 
@@ -39,7 +40,7 @@ export function NewsletterSignup() {
             YOU&apos;RE IN
           </div>
           <p className="text-sm text-text-secondary m-0">
-            We&apos;ll send you the Distraction Index every Sunday.
+            You&apos;re on the list. We&apos;ll notify you when the weekly email launches.
           </p>
         </div>
       </div>
@@ -65,10 +66,10 @@ export function NewsletterSignup() {
     <div className="max-w-[600px] mx-auto px-4 py-6 text-center">
       <div className="bg-surface-raised border border-surface-border rounded-md p-5">
         <div className="text-[12px] font-extrabold text-mixed tracking-widest mb-1">
-          WEEKLY BRIEFING — COMING SOON
+          WEEKLY BRIEFING
         </div>
         <p className="text-sm text-text-secondary mb-3 m-0">
-          Get the Distraction Index delivered to your inbox every Sunday.
+          Sign up to receive the Distraction Index when the weekly email launches.
         </p>
         <form onSubmit={handleSubmit} className="flex gap-2 justify-center max-w-[360px] mx-auto">
           <input
@@ -92,6 +93,9 @@ export function NewsletterSignup() {
             Something went wrong. Please try again.
           </p>
         )}
+        <p className="text-[11px] text-text-dim mt-2 m-0">
+          No spam, ever. See our <Link href="/privacy" className="text-text-dim hover:text-mixed underline">privacy policy</Link>.
+        </p>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ describe('NewsletterSignup', () => {
 
   it('renders the signup form', () => {
     render(<NewsletterSignup />);
-    expect(screen.getByText('WEEKLY BRIEFING — COMING SOON')).toBeInTheDocument();
+    expect(screen.getByText('WEEKLY BRIEFING')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
     expect(screen.getByText('SUBSCRIBE')).toBeInTheDocument();
   });

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -9,16 +10,16 @@ export function TopNav() {
   return (
     <header className="border-b border-surface-border py-2.5 px-4">
       <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-1.5">
-        <div>
-          <Link href="/week/current" className="no-underline">
-            <h1 className="text-2xl font-black text-text-primary font-serif m-0 leading-tight">
-              The Distraction Index
-            </h1>
-          </Link>
-          <p className="text-[11.5px] text-text-dim m-0">
-            Weekly civic intelligence report &middot; v2.2
-          </p>
-        </div>
+        <Link href="/week/current" className="no-underline shrink-0">
+          <Image
+            src="/logo.png"
+            alt="The Distraction Index"
+            width={240}
+            height={56}
+            priority
+            className="h-10 w-auto sm:h-14"
+          />
+        </Link>
 
         {/* Hamburger button — visible only on mobile */}
         <button

@@ -122,6 +122,18 @@ export default function AboutPage() {
           </ul>
         </section>
 
+        <section className="mb-6">
+          <h2 className="text-base font-bold text-text-primary mb-2">Support This Project</h2>
+          <p className="text-[14px] text-text-secondary leading-relaxed mb-3">
+            The Distraction Index is free, ad-free, and open source. If you find it useful,
+            consider{' '}
+            <Link href="/support" className="text-mixed hover:underline">
+              making a donation
+            </Link>{' '}
+            to help cover AI scoring, hosting, and data costs.
+          </p>
+        </section>
+
         <div className="flex gap-2 flex-wrap">
           <Link
             href="/methodology"

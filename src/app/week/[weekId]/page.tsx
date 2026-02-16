@@ -17,6 +17,7 @@ import { FullIndexToggle } from '@/components/FullIndexToggle';
 import { WeekBriefing } from '@/components/WeekBriefing';
 import { ShareButtons } from '@/components/ShareButtons';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
+import { SupportCTA } from '@/components/SupportCTA';
 
 interface WeekPageProps {
   params: Promise<{ weekId: string }>;
@@ -143,6 +144,9 @@ export default async function WeekPage({ params }: WeekPageProps) {
 
           {/* Newsletter signup */}
           <NewsletterSignup />
+
+          {/* Support CTA */}
+          <SupportCTA />
         </>
       ) : (
         /* Empty state */

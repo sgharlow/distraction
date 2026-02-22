@@ -66,8 +66,30 @@ export default async function EventPage({ params }: EventPageProps) {
   const color = list === 'A' ? 'damage' : list === 'B' ? 'distraction' : 'noise';
   const listLabel = list === 'A' ? 'Real Damage' : list === 'B' ? 'Distraction' : 'Noise';
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: event.title,
+    datePublished: event.event_date,
+    description: event.summary ?? '',
+    publisher: {
+      '@type': 'Organization',
+      name: 'The Distraction Index',
+      url: 'https://distractionindex.org',
+    },
+    mainEntityOfPage: `https://distractionindex.org/event/${eventId}`,
+    author: {
+      '@type': 'Organization',
+      name: 'The Distraction Index',
+    },
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <TopNav />
 
       <main className="max-w-[680px] mx-auto px-4 py-5">

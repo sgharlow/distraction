@@ -58,6 +58,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'The Distraction Index',
+              url: 'https://distractionindex.org',
+              description:
+                'Weekly civic intelligence report tracking democratic damage vs. manufactured distractions.',
+              publisher: {
+                '@type': 'Organization',
+                name: 'The Distraction Index',
+                url: 'https://distractionindex.org',
+              },
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: 'https://distractionindex.org/search?q={search_term_string}',
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-surface-base text-text-primary antialiased`}
       >

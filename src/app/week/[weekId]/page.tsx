@@ -79,8 +79,28 @@ export default async function WeekPage({ params }: WeekPageProps) {
     ? allWeeks[currentIdx + 1]
     : null;
 
+  const weekNum = getWeekNumber(weekStart);
+  const label = getWeekLabel(weekStart);
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'DataCatalog',
+    name: `The Distraction Index — Week ${weekNum}: ${label}`,
+    description: `Weekly civic intelligence report for ${label}. Scoring democratic damage vs. manufactured distractions.`,
+    url: `https://distractionindex.org/week/${wid}`,
+    publisher: {
+      '@type': 'Organization',
+      name: 'The Distraction Index',
+      url: 'https://distractionindex.org',
+    },
+    datePublished: wid,
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <TopNav />
       <FirstVisitExplainer />
       <main>

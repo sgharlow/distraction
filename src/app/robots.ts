@@ -9,6 +9,9 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/admin', '/api/'],
       },
     ],
-    sitemap: 'https://distractionindex.org/sitemap.xml',
+    sitemap: [
+      'https://distractionindex.org/sitemap.xml',
+      'https://distractionindex.org/news-sitemap.xml',
+    ],
   };
 }

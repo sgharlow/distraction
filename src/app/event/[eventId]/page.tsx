@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getEventDetail } from '@/lib/data/events';
+import { getWeekNumber } from '@/lib/weeks';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
 import { AttentionBudget } from '@/components/AttentionBudget';
@@ -66,12 +67,16 @@ export default async function EventPage({ params }: EventPageProps) {
   const color = list === 'A' ? 'damage' : list === 'B' ? 'distraction' : 'noise';
   const listLabel = list === 'A' ? 'Real Damage' : list === 'B' ? 'Distraction' : 'Noise';
 
+  const articleSection = list === 'A' ? 'Democratic Damage' : list === 'B' ? 'Manufactured Distraction' : 'Noise';
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     headline: event.title,
     datePublished: event.event_date,
+    dateModified: event.updated_at ?? event.event_date,
     description: event.summary ?? '',
+    articleSection,
+    ...(event.topic_tags && event.topic_tags.length > 0 && { keywords: event.topic_tags.join(', ') }),
     publisher: {
       '@type': 'Organization',
       name: 'The Distraction Index',
@@ -84,11 +89,26 @@ export default async function EventPage({ params }: EventPageProps) {
     },
   };
 
+  const weekNum = getWeekNumber(new Date(event.week_id + 'T00:00:00'));
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://distractionindex.org' },
+      { '@type': 'ListItem', position: 2, name: `Week ${weekNum}`, item: `https://distractionindex.org/week/${event.week_id}` },
+      { '@type': 'ListItem', position: 3, name: event.title },
+    ],
+  };
+
   return (
     <div className="min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
       <TopNav />
 

@@ -49,6 +49,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://distractionindex.org',
   },
+  verification: {
+    google: 'dzOvcZvrc0WdbHUBcUGh9ZwGZzxJrnIGk8RsFzov3F8',
+  },
 };
 
 export default function RootLayout({

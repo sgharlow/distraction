@@ -15,7 +15,7 @@ import { tokenSimilarity } from './similarity';
 import { classifySource } from './classify-source';
 import { scoreEvent } from '@/lib/scoring/service';
 import { pairSmokescreens } from '@/lib/scoring/service';
-import { getWeekIdForDate, getCurrentWeekStart, toWeekId } from '@/lib/weeks';
+import { getCurrentWeekStart, toWeekId } from '@/lib/weeks';
 import type { ArticleInput } from './types';
 import type { Event } from '@/lib/types';
 
@@ -49,12 +49,15 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     .lt('started_at', new Date(Date.now() - 120_000).toISOString());
 
   // 1. Create pipeline run record
-  const { data: run } = await supabase
+  const { data: run, error: runError } = await supabase
     .from('pipeline_runs')
     .insert({ run_type: 'ingest', status: 'running' })
     .select()
     .single();
-  const runId = run?.id || 'unknown';
+  if (!run?.id) {
+    throw new Error(`Failed to create ingest pipeline run: ${runError?.message || 'no data returned'}`);
+  }
+  const runId = run.id;
 
   try {
     // 2. Ensure current week exists
@@ -92,9 +95,22 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     const newArticles = deduplicateArticles(allArticles, existingUrls);
     const articlesNew = newArticles.length;
 
-    // 6. Store new articles with source_type classification
-    if (newArticles.length > 0) {
-      const articleInserts = newArticles.map((a) => ({
+    // 6. Filter out stale articles (older than 7 days) — Google News RSS
+    //    returns articles from months ago that would pollute the current week
+    const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const freshArticles = newArticles.filter((a) => {
+      const pubDate = new Date(a.published_at).getTime();
+      return !isNaN(pubDate) && (now - pubDate) < STALE_THRESHOLD_MS;
+    });
+    const staleCount = newArticles.length - freshArticles.length;
+    if (staleCount > 0) {
+      errors.push(`Filtered ${staleCount} stale articles (older than 7 days)`);
+    }
+
+    // 7. Store fresh articles with source_type classification
+    if (freshArticles.length > 0) {
+      const articleInserts = freshArticles.map((a) => ({
         url: a.url,
         headline: a.headline,
         publisher: a.publisher,
@@ -110,13 +126,13 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
       if (articleError) errors.push(`Article insert error: ${articleError.message}`);
     }
 
-    // 7. Auto-freeze events older than 48h
+    // 8. Auto-freeze events older than 48h
     await supabase.rpc('auto_freeze_events');
 
-    // 8. Finish — articles stored, processing deferred to /api/process
+    // 9. Finish — articles stored, processing deferred to /api/process
     await finishRun(supabase, runId, 'completed', {
       articles_fetched: articlesFetched,
-      articles_new: articlesNew,
+      articles_new: freshArticles.length,
       events_created: 0,
       events_scored: 0,
       errors,
@@ -125,7 +141,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     return {
       run_id: runId,
       articles_fetched: articlesFetched,
-      articles_new: articlesNew,
+      articles_new: freshArticles.length,
       events_created: 0,
       events_scored: 0,
       smokescreen_pairs_created: 0,
@@ -156,12 +172,15 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
   const hasTime = () => timeLeft() > 5000;
 
   // 1. Create pipeline run record
-  const { data: run } = await supabase
+  const { data: run, error: runError } = await supabase
     .from('pipeline_runs')
     .insert({ run_type: 'process', status: 'running' })
     .select()
     .single();
-  const runId = run?.id || 'unknown';
+  if (!run?.id) {
+    throw new Error(`Failed to create process pipeline run: ${runError?.message || 'no data returned'}`);
+  }
+  const runId = run.id;
 
   try {
     const currentWeekId = toWeekId(getCurrentWeekStart());

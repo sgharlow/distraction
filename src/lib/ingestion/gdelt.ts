@@ -53,21 +53,47 @@ export async function searchGdelt(params: {
   if (startDate) url.searchParams.set('startdatetime', startDate);
   if (endDate) url.searchParams.set('enddatetime', endDate);
 
-  const response = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(10000),
-  });
+  // Retry with exponential backoff (handles GDELT 429 rate limits and timeouts)
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    throw new Error(`GDELT API error: ${response.status} ${response.statusText}`);
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    try {
+      const response = await fetch(url.toString(), {
+        signal: AbortSignal.timeout(20000),
+      });
+
+      if (response.status === 429) {
+        lastError = new Error('GDELT rate limited (429)');
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`GDELT API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: GdeltResponse = await response.json();
+
+      if (!data.articles || data.articles.length === 0) {
+        return [];
+      }
+
+      return data.articles.map(normalizeGdeltArticle);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        continue; // Retry on timeout
+      }
+      if (attempt < MAX_RETRIES - 1) continue;
+    }
   }
 
-  const data: GdeltResponse = await response.json();
-
-  if (!data.articles || data.articles.length === 0) {
-    return [];
-  }
-
-  return data.articles.map(normalizeGdeltArticle);
+  throw lastError || new Error('GDELT fetch failed after retries');
 }
 
 /**

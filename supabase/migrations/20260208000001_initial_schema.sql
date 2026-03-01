@@ -239,7 +239,7 @@ CREATE TABLE distraction.community_flags (
 -- ═══════════════════════════════════════════════════════════════
 CREATE TABLE distraction.pipeline_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    run_type TEXT NOT NULL CHECK (run_type IN ('ingest', 'score', 'freeze', 'backfill')),
+    run_type TEXT NOT NULL CHECK (run_type IN ('ingest', 'process', 'score', 'freeze', 'backfill')),
     started_at TIMESTAMPTZ DEFAULT now(),
     completed_at TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'running'

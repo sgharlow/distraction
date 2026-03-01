@@ -15,7 +15,7 @@ import { tokenSimilarity } from './similarity';
 import { classifySource } from './classify-source';
 import { scoreEvent } from '@/lib/scoring/service';
 import { pairSmokescreens } from '@/lib/scoring/service';
-import { getWeekIdForDate } from '@/lib/weeks';
+import { getWeekIdForDate, getCurrentWeekStart, toWeekId } from '@/lib/weeks';
 import type { ArticleInput } from './types';
 import type { Event } from '@/lib/types';
 
@@ -80,7 +80,7 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     const articlesFetched = allArticles.length;
 
     // 4. Get existing article URLs for dedup
-    const currentWeekId = getWeekIdForDate(new Date());
+    const currentWeekId = toWeekId(getCurrentWeekStart());
     const { data: existingArticles } = await supabase
       .from('articles')
       .select('url')
@@ -164,7 +164,7 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
   const runId = run?.id || 'unknown';
 
   try {
-    const currentWeekId = getWeekIdForDate(new Date());
+    const currentWeekId = toWeekId(getCurrentWeekStart());
 
     // 2. Get unassigned articles (no event_id) for current week
     const { data: unassignedArticles } = await supabase

@@ -185,7 +185,97 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
   try {
     const currentWeekId = toWeekId(getCurrentWeekStart());
 
-    // 2. Get unassigned articles (no event_id) for current week
+    // 2. Score any previously deferred (unscored) events first
+    const { data: unscoredEvents } = await supabase
+      .from('events')
+      .select('id, title, summary, mechanism_of_harm, scope, affected_population')
+      .eq('week_id', currentWeekId)
+      .is('a_score', null)
+      .eq('score_frozen', false)
+      .limit(4);
+
+    let eventsScored = 0;
+    if (unscoredEvents && unscoredEvents.length > 0 && hasTime()) {
+      const { data: weekEvents } = await supabase
+        .from('events')
+        .select('title')
+        .eq('week_id', currentWeekId);
+      const weekEventTitles = (weekEvents || []).map((e) => e.title);
+
+      const deferredScoreResults = await Promise.allSettled(
+        unscoredEvents.map(async (evt) => {
+          const { data: evtArticles } = await supabase
+            .from('articles')
+            .select('headline')
+            .eq('event_id', evt.id);
+          const articleHeadlines = (evtArticles || []).map((a) => a.headline).filter(Boolean);
+
+          const { result: scoreResult, tokens: scoreTokens, prompt_version } =
+            await scoreEvent({
+              title: evt.title,
+              summary: evt.summary,
+              mechanism: evt.mechanism_of_harm,
+              scope: evt.scope,
+              affected_population: evt.affected_population,
+              articleHeadlines,
+              weekEventTitles,
+            });
+
+          await supabase
+            .from('events')
+            .update({
+              a_score: scoreResult.a_score.final_score,
+              a_components: scoreResult.a_score as object,
+              a_severity_multiplier:
+                (scoreResult.a_score.severity.durability +
+                  scoreResult.a_score.severity.reversibility +
+                  scoreResult.a_score.severity.precedent) / 3,
+              b_score: scoreResult.b_score.final_score,
+              b_layer1_hype: scoreResult.b_score.layer1 as object,
+              b_layer2_distraction: scoreResult.b_score.layer2 as object,
+              b_intentionality_score: scoreResult.b_score.intentionality.total,
+              primary_list: scoreResult.primary_list,
+              is_mixed: scoreResult.is_mixed,
+              noise_flag: scoreResult.noise_flag,
+              noise_reason_codes: scoreResult.noise_reason_codes,
+              confidence: scoreResult.confidence,
+              score_rationale: scoreResult.score_rationale,
+              action_item: scoreResult.action_item,
+              factual_claims: scoreResult.factual_claims as object,
+              article_count: articleHeadlines.length,
+            })
+            .eq('id', evt.id);
+
+          await supabase.from('score_changes').insert({
+            event_id: evt.id,
+            week_id: currentWeekId,
+            changed_by: 'auto',
+            change_type: 'initial',
+            new_a_score: scoreResult.a_score.final_score,
+            new_b_score: scoreResult.b_score.final_score,
+            new_list: scoreResult.primary_list,
+            reason: 'Deferred scoring (caught up)',
+            version_after: 1,
+            prompt_version,
+            llm_response: scoreResult as object,
+          });
+
+          return scoreTokens;
+        }),
+      );
+
+      for (const result of deferredScoreResults) {
+        if (result.status === 'fulfilled') {
+          totalInput += result.value.input;
+          totalOutput += result.value.output;
+          eventsScored++;
+        } else {
+          errors.push(`Deferred scoring error: ${result.reason}`);
+        }
+      }
+    }
+
+    // 3. Get unassigned articles (no event_id) for current week
     const { data: unassignedArticles } = await supabase
       .from('articles')
       .select('url, headline, publisher, published_at, ingestion_source')
@@ -203,12 +293,12 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
 
     if (newArticles.length === 0) {
       // No unassigned articles — just do smokescreen pairing + stats
-      await runPostProcessing(supabase, currentWeekId, errors);
+      const smokescreenPairsCreated = await runPostProcessing(supabase, currentWeekId, errors);
       await finishRun(supabase, runId, 'completed', {
         articles_fetched: 0,
         articles_new: 0,
         events_created: 0,
-        events_scored: 0,
+        events_scored: eventsScored,
         errors,
       });
       return {
@@ -216,8 +306,8 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
         articles_fetched: 0,
         articles_new: 0,
         events_created: 0,
-        events_scored: 0,
-        smokescreen_pairs_created: 0,
+        events_scored: eventsScored,
+        smokescreen_pairs_created: smokescreenPairsCreated,
         errors,
         tokens: { input: totalInput, output: totalOutput },
       };
@@ -302,7 +392,6 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
 
     // 5b. Score events in parallel (up to 4 concurrent, within time budget)
     const MAX_PARALLEL_SCORES = 4;
-    let eventsScored = 0;
     const eventsToScore = createdEvents.slice(0, hasTime() ? MAX_PARALLEL_SCORES : 0);
     const deferredCount = createdEvents.length - eventsToScore.length;
     if (deferredCount > 0) {

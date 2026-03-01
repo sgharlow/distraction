@@ -25,11 +25,12 @@ interface GNewsResponse {
   articles: GNewsArticle[];
 }
 
-/** Pre-defined search queries covering key topics (limited to 3 for speed) */
+/** Pre-defined search queries — GNews free tier treats multi-word as exact phrases.
+ *  Use broad 1-2 word combos that appear naturally in headlines. */
 const SEARCH_QUERIES = [
-  'trump executive order OR policy',
-  'DOJ lawsuit OR investigation',
-  'federal agency OR congress action',
+  'trump administration',
+  'trump policy',
+  'federal government',
 ];
 
 /**

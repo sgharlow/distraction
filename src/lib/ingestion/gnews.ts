@@ -81,11 +81,13 @@ export async function searchGNews(params: {
  * Uses ~3 of the 100 daily requests.
  */
 export async function fetchGNewsRecent(): Promise<ArticleInput[]> {
-  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  // Use 24h window instead of 6h — political news has gaps, and
+  // dedup in the pipeline prevents storing duplicates across runs
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const settled = await Promise.allSettled(
     SEARCH_QUERIES.map((query) =>
-      searchGNews({ query, from: sixHoursAgo }).catch((err) => {
+      searchGNews({ query, from: oneDayAgo }).catch((err) => {
         console.error(`GNews query failed for "${query}":`, err);
         return [] as ArticleInput[];
       }),

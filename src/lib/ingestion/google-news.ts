@@ -17,9 +17,11 @@ const GOOGLE_NEWS_RSS = 'https://news.google.com/rss/search';
 
 /** Search queries for Google News RSS */
 const RSS_QUERIES = [
-  'trump executive order site:reuters.com OR site:apnews.com',
+  'trump executive order',
   'DOJ lawsuit federal government',
   'trump administration policy action',
+  'congress legislation federal agency',
+  'white house DOGE federal workers',
 ];
 
 /**

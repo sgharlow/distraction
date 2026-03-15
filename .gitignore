@@ -58,3 +58,13 @@ democracy-docket-oped.md
 
 # marketing content (private submission drafts)
 /marketing/
+
+# outreach automation artifacts
+scripts/outreach/email-sent-log.json
+scripts/outreach/form-submissions.json
+scripts/outreach/reddit-posts.json
+scripts/outreach/screenshots/
+scripts/outreach/schedule-state.json
+scripts/outreach/post-history.json
+scripts/outreach/scheduler.log
+scripts/outreach/.linkedin-session/

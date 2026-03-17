@@ -48,6 +48,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://distractionindex.org',
+    types: {
+      'application/atom+xml': '/feed.xml',
+    },
   },
   verification: {
     google: 'dzOvcZvrc0WdbHUBcUGh9ZwGZzxJrnIGk8RsFzov3F8',

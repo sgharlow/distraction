@@ -34,7 +34,9 @@
     "outreach:content:midday": "npx tsx scripts/outreach/content-variants.ts midday",
     "outreach:content:evening": "npx tsx scripts/outreach/content-variants.ts evening",
     "outreach:threads": "npx tsx scripts/outreach/threads-post.ts",
-    "outreach:linkedin": "npx tsx scripts/outreach/linkedin-post.ts"
+    "outreach:linkedin": "npx tsx scripts/outreach/linkedin-post.ts",
+    "blog:generate": "npx tsx scripts/generate-blog-backlog.ts",
+    "blog:generate:dry": "npx tsx scripts/generate-blog-backlog.ts --dry-run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

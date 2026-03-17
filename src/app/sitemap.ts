@@ -6,7 +6,7 @@ const BASE_URL = 'https://distractionindex.org';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createAdminClient();
 
-  const [{ data: weeks }, { data: events }, { data: topicRows }] = await Promise.all([
+  const [{ data: weeks }, { data: events }, { data: topicRows }, { data: blogPosts }] = await Promise.all([
     supabase
       .from('weekly_snapshots')
       .select('week_id, status, frozen_at, created_at')
@@ -20,6 +20,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from('events')
       .select('topic_tags')
       .not('topic_tags', 'is', null),
+    supabase
+      .from('blog_posts')
+      .select('slug, published_at, updated_at')
+      .order('published_at', { ascending: false }),
   ]);
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -31,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/timeline`, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${BASE_URL}/search`, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${BASE_URL}/topic`, changeFrequency: 'weekly', priority: 0.6 },
+    { url: `${BASE_URL}/blog`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE_URL}/about`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE_URL}/contact`, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${BASE_URL}/privacy`, changeFrequency: 'yearly', priority: 0.3 },
@@ -66,5 +71,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
-  return [...staticPages, ...weekPages, ...eventPages, ...topicPages];
+  const blogPages: MetadataRoute.Sitemap = (blogPosts || []).map((p) => ({
+    url: `${BASE_URL}/blog/${p.slug}`,
+    lastModified: p.updated_at ?? p.published_at,
+    changeFrequency: 'yearly' as const,
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...weekPages, ...eventPages, ...topicPages, ...blogPages];
 }

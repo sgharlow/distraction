@@ -156,7 +156,7 @@ export function formatLongPost(summary: WeekSummary): string {
 export function formatEmailPitch(summary: WeekSummary, recipientName: string, recipientFocus: string): string {
   return `Hi ${recipientName},
 
-I'm following up on my earlier message about The Distraction Index (distractionindex.org) — a civic data tool that scores democratic damage vs. manufactured distractions each week.
+I'm reaching out about The Distraction Index (distractionindex.org) — an open-source civic data tool that scores democratic damage vs. manufactured distractions each week.
 
 This week's data tells a striking story: we tracked ${summary.totalEvents} events.${summary.topDamage ? ` The highest constitutional damage event was "${summary.topDamage.title}" scoring ${summary.topDamage.scoreA}/100.` : ''}${summary.topDistraction ? ` Meanwhile, "${summary.topDistraction.title}" dominated media attention with a distraction score of ${summary.topDistraction.scoreB}/100.` : ''}${summary.smokescreenPairs > 0 ? ` We detected ${summary.smokescreenPairs} smokescreen pairs — high-distraction events appearing to cover for genuine democratic damage.` : ''}
 

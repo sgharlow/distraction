@@ -49,11 +49,14 @@ interface PostRecord {
   charCount: number;
 }
 
-// EST timezone offset helpers
+// Eastern timezone helpers (handles EST/EDT automatically)
 function getESTDate(): string {
   const now = new Date();
   const est = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  return est.toISOString().split('T')[0];
+  const year = est.getFullYear();
+  const month = String(est.getMonth() + 1).padStart(2, '0');
+  const day = String(est.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function getESTHour(): number {
@@ -531,7 +534,16 @@ async function runOnce(): Promise<void> {
   await executePost(slot);
 }
 
-async function forcePost(slot: PostSlot): Promise<void> {
+async function forcePost(slot: PostSlot, skipDedupCheck = false): Promise<void> {
+  if (!skipDedupCheck) {
+    const today = getESTDate();
+    const history = loadHistory();
+    const alreadyPosted = history.find(h => h.date === today && h.slot === slot);
+    if (alreadyPosted) {
+      console.log(`Already posted for ${slot} slot today (${today}). Use --force to override.`);
+      return;
+    }
+  }
   console.log(`Force posting for ${slot} slot...`);
   await executePost(slot);
 }
@@ -586,10 +598,11 @@ async function main() {
   } else if (args.includes('--post')) {
     const slot = args[args.indexOf('--post') + 1] as PostSlot;
     if (!['morning', 'midday', 'evening'].includes(slot)) {
-      console.error('Usage: --post morning|midday|evening');
+      console.error('Usage: --post morning|midday|evening [--force]');
       process.exit(1);
     }
-    await forcePost(slot);
+    const skipDedup = args.includes('--force');
+    await forcePost(slot, skipDedup);
   } else {
     await runSchedulerLoop();
   }

@@ -81,18 +81,18 @@ export default async function WeekPage({ params }: WeekPageProps) {
 
   const weekNum = getWeekNumber(weekStart);
   const label = getWeekLabel(weekStart);
+  const weekNumber = weekNum;
+  const weekIdStr = wid;
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'DataCatalog',
-    name: `The Distraction Index — Week ${weekNum}: ${label}`,
-    description: `Weekly civic intelligence report for ${label}. Scoring democratic damage vs. manufactured distractions.`,
-    url: `https://distractionindex.org/week/${wid}`,
-    publisher: {
-      '@type': 'Organization',
-      name: 'The Distraction Index',
-      url: 'https://distractionindex.org',
-    },
-    datePublished: wid,
+    '@type': 'Dataset',
+    name: `Distraction Index — Week ${weekNumber}`,
+    description: `Political events scored for constitutional damage and media distraction. Week of ${weekIdStr}.`,
+    url: `https://distractionindex.org/week/${weekIdStr}`,
+    datePublished: snapshot?.created_at,
+    dateModified: snapshot?.frozen_at ?? snapshot?.created_at,
+    creator: { '@type': 'Organization', name: 'The Distraction Index', url: 'https://distractionindex.org' },
+    license: 'https://opensource.org/licenses/MIT',
   };
 
   return (

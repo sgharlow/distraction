@@ -44,6 +44,7 @@ export function TopNav() {
           <NavLink href="/methodology" label="Method" />
           <NavLink href="/corrections" label="Corrections" />
           <NavLink href="/about" label="About" />
+          <NavLink href="/blog" label="Blog" />
           <NavLink href="/contact" label="Contact" />
           <NavLink href="/support" label="Support" />
         </nav>
@@ -61,6 +62,7 @@ export function TopNav() {
           <NavLink href="/methodology" label="Method" onClick={() => setMenuOpen(false)} />
           <NavLink href="/corrections" label="Corrections" onClick={() => setMenuOpen(false)} />
           <NavLink href="/about" label="About" onClick={() => setMenuOpen(false)} />
+          <NavLink href="/blog" label="Blog" onClick={() => setMenuOpen(false)} />
           <NavLink href="/contact" label="Contact" onClick={() => setMenuOpen(false)} />
           <NavLink href="/support" label="Support" onClick={() => setMenuOpen(false)} />
         </nav>

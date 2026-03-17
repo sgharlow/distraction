@@ -21,8 +21,29 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'The Distraction Index',
+    url: 'https://distractionindex.org',
+    description: 'Independent civic intelligence platform tracking democratic damage vs. manufactured distractions.',
+    foundingDate: '2024-12-29',
+    founder: { '@type': 'Person', name: 'Steve Harlow' },
+    sameAs: [
+      'https://bsky.app/profile/sgharlow.bsky.social',
+      'https://mastodon.social/@sgharlow',
+      'https://www.threads.net/@distractionindex',
+      'https://distractionindex.substack.com',
+      'https://github.com/sgharlow/distraction',
+    ],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <TopNav />
       <main className="mx-auto max-w-[720px] px-4 py-6">
         <h1 className="mb-1 font-serif text-xl font-extrabold text-text-primary">

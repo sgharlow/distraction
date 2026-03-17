@@ -36,7 +36,11 @@
     "outreach:threads": "npx tsx scripts/outreach/threads-post.ts",
     "outreach:linkedin": "npx tsx scripts/outreach/linkedin-post.ts",
     "blog:generate": "npx tsx scripts/generate-blog-backlog.ts",
-    "blog:generate:dry": "npx tsx scripts/generate-blog-backlog.ts --dry-run"
+    "blog:generate:dry": "npx tsx scripts/generate-blog-backlog.ts --dry-run",
+    "substack:publish": "npx tsx scripts/outreach/substack-publish.ts",
+    "substack:publish:dry": "npx tsx scripts/outreach/substack-publish.ts --dry-run",
+    "directories:submit": "npx tsx scripts/submit-directories.ts",
+    "directories:submit:dry": "npx tsx scripts/submit-directories.ts --dry-run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

@@ -119,7 +119,7 @@ async function generateMorningPost(
     },
   ];
 
-  const chosen = pickRandom(variants)();
+  const chosen = await pickRandom(variants)();
   return { ...chosen, slot: 'morning' };
 }
 
@@ -154,7 +154,7 @@ async function generateMiddayPost(
     },
   ];
 
-  const chosen = pickRandom(variants)();
+  const chosen = await pickRandom(variants)();
   return { ...chosen, slot: 'midday' };
 }
 
@@ -202,7 +202,35 @@ async function generateEveningPost(
     },
   ];
 
-  const chosen = pickRandom(variants)();
+    // Variant: Historical evergreen stat
+    () => {
+      return {
+        text: `In 60+ weeks of tracking the Distraction Index, we've scored 1,500+ political events on two axes:\n\n🔴 Constitutional damage (real governance harm)\n🟠 Distraction/Hype (media amplification)\n\nWhen damage is high but coverage is low — that's the pattern we exist to expose.\n\nhttps://distractionindex.org`,
+        variant: 'evergreen-mission',
+      };
+    },
+    // Variant: Blog post promotion
+    async () => {
+      const { data: latest } = await supabase
+        .from('blog_posts')
+        .select('slug, title, week_id')
+        .order('published_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (latest) {
+        return {
+          text: `New analysis: "${latest.title}"\n\nData-driven breakdown of this week's democratic damage vs. manufactured distractions.\n\nRead: https://distractionindex.org/blog/${latest.slug}`,
+          variant: 'blog-promo',
+        };
+      }
+      return {
+        text: `Every week, the Distraction Index publishes a frozen, immutable record of U.S. political events — scored for both constitutional damage AND media hype.\n\n59+ weeks. Open source. No editorial spin.\n\nhttps://distractionindex.org`,
+        variant: 'evergreen-record',
+      };
+    },
+  ];
+
+  const chosen = await pickRandom(variants)();
   return { ...chosen, slot: 'evening' };
 }
 

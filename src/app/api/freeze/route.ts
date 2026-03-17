@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getCurrentWeekStart, toWeekId } from '@/lib/weeks';
 import { addDays } from 'date-fns';
+import { runFreezeCascade } from '@/lib/blog/cascade';
 
 export const maxDuration = 30;
 
@@ -67,10 +68,19 @@ export async function GET(request: NextRequest) {
       metadata: { week_frozen: previousWeekId, result: freezeResult },
     });
 
+    // Run content cascade: blog post, social, email, sitemap ping
+    let cascade = null;
+    try {
+      cascade = await runFreezeCascade(previousWeekId);
+    } catch (cascadeErr) {
+      console.error('Cascade error (non-fatal):', cascadeErr);
+    }
+
     return NextResponse.json({
       success: true,
       week_frozen: previousWeekId,
       result: freezeResult,
+      cascade,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

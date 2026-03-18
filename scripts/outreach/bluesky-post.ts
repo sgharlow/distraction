@@ -17,11 +17,12 @@ import { getCurrentWeekSummary, formatShortPost } from './week-summary';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
-const BLUESKY_SERVICE = 'https://bsky.social';
+const BLUESKY_AUTH_SERVICE = 'https://bsky.social';
 
 interface BlueskySession {
   did: string;
   accessJwt: string;
+  pdsEndpoint: string;
 }
 
 async function createSession(): Promise<BlueskySession> {
@@ -35,7 +36,7 @@ async function createSession(): Promise<BlueskySession> {
     );
   }
 
-  const res = await fetch(`${BLUESKY_SERVICE}/xrpc/com.atproto.server.createSession`, {
+  const res = await fetch(`${BLUESKY_AUTH_SERVICE}/xrpc/com.atproto.server.createSession`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier: handle, password }),
@@ -46,7 +47,12 @@ async function createSession(): Promise<BlueskySession> {
     throw new Error(`Bluesky auth failed: ${res.status} ${err}`);
   }
 
-  return res.json();
+  const data = await res.json();
+
+  // Resolve actual PDS endpoint from DID document (Bluesky migrates users between PDS instances)
+  const pdsEndpoint = data.didDoc?.service?.find((s: any) => s.id === '#atproto_pds')?.serviceEndpoint || BLUESKY_AUTH_SERVICE;
+
+  return { did: data.did, accessJwt: data.accessJwt, pdsEndpoint };
 }
 
 async function createPost(session: BlueskySession, text: string): Promise<string> {
@@ -81,7 +87,7 @@ async function createPost(session: BlueskySession, text: string): Promise<string
       };
     }
 
-    const res = await fetch(`${BLUESKY_SERVICE}/xrpc/com.atproto.repo.createRecord`, {
+    const res = await fetch(`${session.pdsEndpoint}/xrpc/com.atproto.repo.createRecord`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -134,7 +134,7 @@ async function postToBluesky(text: string): Promise<{ success: boolean; error?: 
     const password = process.env.BLUESKY_APP_PASSWORD;
     if (!handle || !password) return { success: false, error: 'Missing credentials' };
 
-    // Create session
+    // Create session and resolve PDS endpoint (Bluesky migrates users between PDS instances)
     const sessionRes = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,6 +142,7 @@ async function postToBluesky(text: string): Promise<{ success: boolean; error?: 
     });
     if (!sessionRes.ok) return { success: false, error: `Auth failed: ${sessionRes.status}` };
     const session = await sessionRes.json();
+    const pdsEndpoint = session.didDoc?.service?.find((s: any) => s.id === '#atproto_pds')?.serviceEndpoint || 'https://bsky.social';
 
     // Detect URLs for facets
     const facets: any[] = [];
@@ -184,7 +185,7 @@ async function postToBluesky(text: string): Promise<{ success: boolean; error?: 
       if (chunkFacets.length > 0) record.facets = chunkFacets;
       if (parentRef) record.reply = { root: rootRef, parent: parentRef };
 
-      const postRes = await fetch('https://bsky.social/xrpc/com.atproto.repo.createRecord', {
+      const postRes = await fetch(`${pdsEndpoint}/xrpc/com.atproto.repo.createRecord`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

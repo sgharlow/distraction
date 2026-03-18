@@ -200,7 +200,6 @@ async function generateEveningPost(
         variant: 'topic',
       };
     },
-  ];
 
     // Variant: Historical evergreen stat
     () => {

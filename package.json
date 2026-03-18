@@ -21,6 +21,7 @@
     "outreach:preview": "npx tsx scripts/outreach/week-summary.ts",
     "outreach:bluesky": "npx tsx scripts/outreach/bluesky-post.ts",
     "outreach:bluesky:thread": "npx tsx scripts/outreach/bluesky-thread.ts",
+    "outreach:bluesky:engage": "npx tsx scripts/outreach/bluesky-engage.ts",
     "outreach:mastodon": "npx tsx scripts/outreach/mastodon-post.ts",
     "outreach:email:new": "npx tsx scripts/outreach/email-campaign.ts --new-targets",
     "outreach:email:followup": "npx tsx scripts/outreach/email-campaign.ts --followup",

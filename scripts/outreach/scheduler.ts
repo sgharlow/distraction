@@ -20,13 +20,21 @@
  */
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { generatePost, type PostSlot } from './content-variants';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
 const SCHEDULE_FILE = resolve(__dirname, 'schedule-state.json');
 const POST_HISTORY = resolve(__dirname, 'post-history.json');
+const THREADS_SESSION_DIR = resolve(__dirname, '.threads-session');
+const SCREENSHOT_DIR = resolve(__dirname, 'debug-screenshots');
+const THREADS_MAX_RETRIES = 3;
+const THREADS_RETRY_DELAY_MS = 5000;
+
+function ensureDir(dir: string): void {
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
 
 interface ScheduleState {
   date: string;  // YYYY-MM-DD
@@ -261,54 +269,176 @@ function splitText(text: string, maxLen: number): string[] {
   return chunks;
 }
 
-async function postToThreadsBrowser(text: string): Promise<{ success: boolean; error?: string }> {
+async function postToThreadsSingleAttempt(text: string, attempt: number): Promise<{ success: boolean; error?: string }> {
+  const username = process.env.THREADS_USERNAME;
+  const password = process.env.THREADS_PASSWORD;
+  if (!username || !password) return { success: false, error: 'Missing THREADS_USERNAME or THREADS_PASSWORD' };
+
+  const { chromium } = await import('playwright');
+
+  // Use persistent context to maintain login session across runs.
+  // Avoids headless shell crash (exitCode 3221225794) on Windows.
+  ensureDir(THREADS_SESSION_DIR);
+
+  let context;
   try {
-    const username = process.env.THREADS_USERNAME;
-    const password = process.env.THREADS_PASSWORD;
-    if (!username || !password) return { success: false, error: 'Missing THREADS_USERNAME or THREADS_PASSWORD' };
-
-    const { chromium } = await import('playwright');
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-
-    try {
-      await page.goto('https://www.threads.com/login?show_choice_screen=false', { waitUntil: 'networkidle', timeout: 30000 });
-      await page.waitForTimeout(2000);
-
-      // Check if already logged in (redirected to home)
-      const loginForm = page.getByRole('textbox', { name: /username|phone|email/i });
-      const needsLogin = await loginForm.isVisible().catch(() => false);
-
-      if (needsLogin) {
-        await loginForm.fill(username);
-        await page.getByRole('textbox', { name: /password/i }).fill(password);
-        await page.getByRole('button', { name: 'Log in', exact: true }).first().click();
-        await page.waitForTimeout(5000);
-      }
-
-      // Wait for Create button (works whether we logged in or were already logged in)
-      const createBtn = page.getByRole('button', { name: 'Create' }).first();
-      await createBtn.waitFor({ state: 'visible', timeout: 15000 });
-      await createBtn.click();
-      await page.waitForTimeout(2000);
-
-      // The composer may be a contenteditable div, not a textbox
-      const composer = page.locator('[contenteditable="true"], [role="textbox"]').first();
-      await composer.waitFor({ state: 'visible', timeout: 10000 });
-      await composer.fill(text);
-      await page.waitForTimeout(1000);
-
-      // Click Post — may be a div with role=button
-      await page.locator('div[role="button"]:has-text("Post")').last().click();
-      await page.waitForTimeout(3000);
-
-      return { success: true };
-    } finally {
-      await browser.close();
-    }
-  } catch (e: any) {
-    return { success: false, error: e.message };
+    context = await chromium.launchPersistentContext(THREADS_SESSION_DIR, {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+      ],
+      timeout: 30000,
+    });
+  } catch (launchErr: any) {
+    return { success: false, error: `Browser launch failed (attempt ${attempt}): ${launchErr.message.substring(0, 200)}` };
   }
+
+  const page = context.pages()[0] || await context.newPage();
+
+  try {
+    console.log(`    [Threads attempt ${attempt}] Navigating...`);
+
+    // Use domcontentloaded — Threads React SPA keeps connections open, networkidle times out
+    await page.goto('https://www.threads.net/login', {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000,
+    });
+    await page.waitForTimeout(3000);
+
+    // Check if already logged in via persistent session
+    const createBtnEarly = page.getByRole('link', { name: /create/i }).first();
+    const alreadyLoggedIn = await createBtnEarly.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (!alreadyLoggedIn) {
+      const createBtnAlt = page.getByRole('button', { name: /create/i }).first();
+      const altLoggedIn = await createBtnAlt.isVisible({ timeout: 2000 }).catch(() => false);
+
+      if (!altLoggedIn) {
+        console.log(`    [Threads attempt ${attempt}] Logging in...`);
+
+        const usernameInput = page.getByRole('textbox', { name: /username|phone|email/i });
+        await usernameInput.waitFor({ state: 'visible', timeout: 15000 });
+        await usernameInput.fill(username);
+
+        const passwordInput = page.getByRole('textbox', { name: /password/i });
+        await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+        await passwordInput.fill(password);
+
+        const loginBtn = page.getByRole('button', { name: 'Log in', exact: true }).first();
+        await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
+        await loginBtn.click();
+
+        await page.waitForTimeout(6000);
+
+        // Check for login error
+        const errorText = await page.locator('[role="alert"], [data-testid="login-error"]').textContent().catch(() => null);
+        if (errorText) {
+          return { success: false, error: `Login error: ${errorText}` };
+        }
+      }
+    }
+
+    // Wait for Create button with broader selectors and longer timeout
+    console.log(`    [Threads attempt ${attempt}] Looking for Create button...`);
+
+    let createBtn = page.getByRole('button', { name: /create/i }).first();
+    let createVisible = await createBtn.waitFor({ state: 'visible', timeout: 30000 }).then(() => true).catch(() => false);
+
+    if (!createVisible) {
+      createBtn = page.getByRole('link', { name: /create/i }).first();
+      createVisible = await createBtn.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+    }
+
+    if (!createVisible) {
+      createBtn = page.locator('[aria-label="Create"], [aria-label="New thread"]').first();
+      createVisible = await createBtn.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+    }
+
+    if (!createVisible) {
+      ensureDir(SCREENSHOT_DIR);
+      const screenshotPath = resolve(SCREENSHOT_DIR, `threads-no-create-${Date.now()}.png`);
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      return { success: false, error: `Create button not found (attempt ${attempt}). Screenshot: ${screenshotPath}` };
+    }
+
+    await createBtn.click();
+    await page.waitForTimeout(2000);
+
+    // Wait for composer with increased timeout
+    const composer = page.locator('[contenteditable="true"], [role="textbox"]').first();
+    await composer.waitFor({ state: 'visible', timeout: 20000 });
+
+    // Fill text, with keyboard fallback
+    await composer.click();
+    await page.waitForTimeout(500);
+    await composer.fill(text);
+    await page.waitForTimeout(1000);
+
+    const composerText = await composer.textContent().catch(() => '');
+    if (!composerText || composerText.length < 10) {
+      console.log(`    [Threads attempt ${attempt}] fill() may have failed, using keyboard.type()...`);
+      await composer.click();
+      await page.keyboard.press('ControlOrMeta+A');
+      await page.keyboard.press('Backspace');
+      await page.waitForTimeout(300);
+      await page.keyboard.type(text, { delay: 3 });
+      await page.waitForTimeout(1000);
+    }
+
+    // Click Post
+    const postBtn = page.locator('div[role="button"]:has-text("Post")').last();
+    await postBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await postBtn.click();
+    await page.waitForTimeout(4000);
+
+    return { success: true };
+  } catch (err: any) {
+    try {
+      ensureDir(SCREENSHOT_DIR);
+      const screenshotPath = resolve(SCREENSHOT_DIR, `threads-error-${Date.now()}.png`);
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+    } catch {
+      // Screenshot failed — browser may have crashed
+    }
+    return { success: false, error: `Attempt ${attempt}: ${err.message.substring(0, 300)}` };
+  } finally {
+    try {
+      await context.close();
+    } catch {
+      // Ignore close errors
+    }
+  }
+}
+
+async function postToThreadsBrowser(text: string): Promise<{ success: boolean; error?: string }> {
+  const errors: string[] = [];
+
+  for (let attempt = 1; attempt <= THREADS_MAX_RETRIES; attempt++) {
+    if (attempt > 1) {
+      console.log(`    [Threads] Retrying in ${THREADS_RETRY_DELAY_MS / 1000}s (attempt ${attempt}/${THREADS_MAX_RETRIES})...`);
+      await new Promise(r => setTimeout(r, THREADS_RETRY_DELAY_MS));
+    }
+
+    const result = await postToThreadsSingleAttempt(text, attempt);
+    if (result.success) {
+      if (attempt > 1) {
+        console.log(`    [Threads] Succeeded on attempt ${attempt}/${THREADS_MAX_RETRIES}`);
+      }
+      return { success: true };
+    }
+
+    errors.push(result.error || 'Unknown error');
+    console.log(`    [Threads] Attempt ${attempt} failed: ${result.error?.substring(0, 150)}`);
+
+    // Don't retry credential errors
+    if (result.error?.includes('Missing THREADS_') || result.error?.includes('Login error')) {
+      break;
+    }
+  }
+
+  return { success: false, error: errors.join(' | ').substring(0, 500) };
 }
 
 async function postToLinkedInBrowser(text: string): Promise<{ success: boolean; error?: string }> {

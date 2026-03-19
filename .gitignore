@@ -68,3 +68,5 @@ scripts/outreach/schedule-state.json
 scripts/outreach/post-history.json
 scripts/outreach/scheduler.log
 scripts/outreach/.linkedin-session/
+scripts/outreach/.threads-session/
+scripts/outreach/debug-screenshots/

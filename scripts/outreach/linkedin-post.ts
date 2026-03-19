@@ -32,7 +32,7 @@ async function postToLinkedIn(text: string, dryRun: boolean): Promise<boolean> {
   const { chromium } = await import('playwright');
   // Use persistent context to keep LinkedIn session alive across runs
   const userDataDir = resolve(__dirname, '.linkedin-session');
-  const context = await firefox.launchPersistentContext(userDataDir, { headless: false });
+  const context = await chromium.launchPersistentContext(userDataDir, { headless: false });
   const page = context.pages()[0] || await context.newPage();
 
   try {

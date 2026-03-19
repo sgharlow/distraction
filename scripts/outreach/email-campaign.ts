@@ -97,6 +97,9 @@ function saveSentLog(log: SentRecord[]): void {
 }
 
 function getFollowUpContacts(contacts: Contact[], sentLog: SentRecord[]): Contact[] {
+  const now = Date.now();
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
   return contacts.filter(c => {
     if (!c.email || c.status === 'BOUNCED') return false;
     if (!c.status.startsWith('EMAILED')) return false;
@@ -106,7 +109,16 @@ function getFollowUpContacts(contacts: Contact[], sentLog: SentRecord[]): Contac
     const followUps = sentToThis.filter(s => s.type.startsWith('followup'));
 
     // Max 3 follow-ups
-    return followUps.length < 3;
+    if (followUps.length >= 3) return false;
+
+    // Enforce 7-day minimum wait since last email to this contact
+    const lastSent = sentToThis.reduce((latest, s) => {
+      const t = new Date(s.sentAt).getTime();
+      return t > latest ? t : latest;
+    }, 0);
+    if (lastSent > 0 && (now - lastSent) < SEVEN_DAYS_MS) return false;
+
+    return true;
   });
 }
 

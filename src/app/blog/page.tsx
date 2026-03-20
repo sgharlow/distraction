@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllBlogPosts } from '@/lib/data/blog';
 import { getWeekNumber } from '@/lib/weeks';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 
 export const metadata: Metadata = {
   title: 'Blog — Weekly Analysis',
@@ -55,6 +56,8 @@ export default async function BlogPage() {
           <p className="text-[var(--color-text-muted)]">No posts yet. Check back soon.</p>
         )}
       </div>
+
+      <NewsletterSignup />
     </main>
   );
 }

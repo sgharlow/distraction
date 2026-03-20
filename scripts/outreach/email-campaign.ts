@@ -243,11 +243,17 @@ async function main() {
     emailType = 'initial';
     console.log(`\nNew constitutional protection targets: ${contacts.length} orgs`);
   } else if (followUp) {
-    // Follow up existing contacts that haven't responded
-    const allContacts = loadContacts();
+    // Follow up ALL contacts that haven't responded: CSV + constitutional targets
+    const csvContacts = loadContacts();
+    // Include constitutional targets that were previously emailed (tracked in sent log)
+    const sentEmails = new Set(sentLog.map(s => s.email));
+    const emailedConstitutionalTargets = CONSTITUTIONAL_TARGETS
+      .filter(c => sentEmails.has(c.email))
+      .map(c => ({ ...c, status: 'EMAILED' }));
+    const allContacts = [...csvContacts, ...emailedConstitutionalTargets];
     contacts = getFollowUpContacts(allContacts, sentLog);
     emailType = 'followup-1'; // Will be refined per-contact below
-    console.log(`\nFollowup targets: ${contacts.length} contacts`);
+    console.log(`\nFollowup targets: ${contacts.length} contacts (${csvContacts.length} CSV + ${emailedConstitutionalTargets.length} constitutional orgs)`);
   } else if (targetFilter) {
     const allContacts = [...loadContacts(), ...CONSTITUTIONAL_TARGETS];
     contacts = allContacts.filter(c =>

@@ -180,7 +180,7 @@ async function generateEveningPost(
     // Variant 2: Call to action
     () => {
       return {
-        text: `The Distraction Index tracks ${events.length}+ events per week, scoring each for constitutional damage AND media distraction.\n\n59 weeks of data. 1,500+ scored events. Open source. No ads.\n\nBuilt because democracy needs data, not just opinions.\n\nhttps://distractionindex.org\nhttps://distractionindex.org/methodology`,
+        text: `The Distraction Index tracks ${events.length}+ events per week, scoring each for constitutional damage AND media distraction.\n\n60+ weeks of data. 1,500+ scored events. Open source. No ads.\n\nBuilt because democracy needs data, not just opinions.\n\nhttps://distractionindex.org\nSubscribe: https://distractionindex.substack.com`,
         variant: 'cta',
       };
     },
@@ -225,6 +225,13 @@ async function generateEveningPost(
       return {
         text: `Every week, the Distraction Index publishes a frozen, immutable record of U.S. political events — scored for both constitutional damage AND media hype.\n\n59+ weeks. Open source. No editorial spin.\n\nhttps://distractionindex.org`,
         variant: 'evergreen-record',
+      };
+    },
+    // Variant: Newsletter subscribe CTA
+    () => {
+      return {
+        text: `Want the Distraction Index delivered to your inbox?\n\nEvery week, we publish a data-driven analysis of democratic damage vs. manufactured distractions.\n\nSubscribe free: https://distractionindex.substack.com\n\nOr read the latest at https://distractionindex.org`,
+        variant: 'newsletter-cta',
       };
     },
   ];

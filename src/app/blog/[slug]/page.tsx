@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getBlogPost, getAllBlogPosts } from '@/lib/data/blog';
 import { getWeekNumber } from '@/lib/weeks';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -104,6 +105,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
           )}
         </article>
+
+        <NewsletterSignup />
       </main>
     </>
   );

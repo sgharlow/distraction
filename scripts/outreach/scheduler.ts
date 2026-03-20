@@ -1,6 +1,6 @@
 /**
  * Automated 3x/day social media scheduler.
- * Posts to Bluesky + Mastodon at random times within 3 daily windows.
+ * Posts to Bluesky + Mastodon + Threads + LinkedIn + Twitter/X at random times within 3 daily windows.
  *
  * Windows (EST):
  *   Morning:  6:00 AM - 8:00 AM
@@ -22,6 +22,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { generatePost, type PostSlot } from './content-variants';
+import { postToTwitter } from './twitter-post';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -53,6 +54,7 @@ interface PostRecord {
   mastodon: { success: boolean; error?: string };
   threads: { success: boolean; error?: string };
   linkedin: { success: boolean; error?: string };
+  twitter?: { success: boolean; error?: string };
   postedAt: string;
   charCount: number;
 }
@@ -275,9 +277,14 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
   if (!username || !password) return { success: false, error: 'Missing THREADS_USERNAME or THREADS_PASSWORD' };
 
   const { chromium } = await import('playwright');
+  const { rmSync } = await import('fs');
 
-  // Use persistent context to maintain login session across runs.
-  // Avoids headless shell crash (exitCode 3221225794) on Windows.
+  // Clean corrupted session before retry — crashed Chromium leaves broken profile
+  if (attempt > 1) {
+    try {
+      rmSync(THREADS_SESSION_DIR, { recursive: true, force: true });
+    } catch {}
+  }
   ensureDir(THREADS_SESSION_DIR);
 
   let context;
@@ -288,10 +295,16 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
         '--no-sandbox',
         '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
       ],
+      viewport: { width: 1280, height: 800 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       timeout: 30000,
     });
   } catch (launchErr: any) {
+    // Nuke corrupted session for next attempt
+    try { rmSync(THREADS_SESSION_DIR, { recursive: true, force: true }); } catch {}
     return { success: false, error: `Browser launch failed (attempt ${attempt}): ${launchErr.message.substring(0, 200)}` };
   }
 
@@ -300,51 +313,62 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
   try {
     console.log(`    [Threads attempt ${attempt}] Navigating...`);
 
-    // Use domcontentloaded — Threads React SPA keeps connections open, networkidle times out
-    await page.goto('https://www.threads.net/login', {
+    // Navigate to homepage first — if session is valid, Create button appears without login
+    await page.goto('https://www.threads.net/', {
       waitUntil: 'domcontentloaded',
       timeout: 45000,
     });
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(4000);
 
     // Check if already logged in via persistent session
-    const createBtnEarly = page.getByRole('link', { name: /create/i }).first();
-    const alreadyLoggedIn = await createBtnEarly.isVisible({ timeout: 3000 }).catch(() => false);
+    let createBtn = page.getByRole('link', { name: /create/i }).first();
+    let loggedIn = await createBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    if (!loggedIn) {
+      createBtn = page.getByRole('button', { name: /create/i }).first();
+      loggedIn = await createBtn.isVisible({ timeout: 2000 }).catch(() => false);
+    }
+    if (!loggedIn) {
+      createBtn = page.locator('[aria-label="Create"], [aria-label="New thread"]').first();
+      loggedIn = await createBtn.isVisible({ timeout: 2000 }).catch(() => false);
+    }
 
-    if (!alreadyLoggedIn) {
-      const createBtnAlt = page.getByRole('button', { name: /create/i }).first();
-      const altLoggedIn = await createBtnAlt.isVisible({ timeout: 2000 }).catch(() => false);
+    if (!loggedIn) {
+      // Not logged in — navigate to login page
+      console.log(`    [Threads attempt ${attempt}] Logging in...`);
+      await page.goto('https://www.threads.net/login', {
+        waitUntil: 'domcontentloaded',
+        timeout: 45000,
+      });
+      await page.waitForTimeout(3000);
 
-      if (!altLoggedIn) {
-        console.log(`    [Threads attempt ${attempt}] Logging in...`);
+      const usernameInput = page.getByRole('textbox', { name: /username|phone|email/i });
+      await usernameInput.waitFor({ state: 'visible', timeout: 15000 });
+      await usernameInput.fill(username);
 
-        const usernameInput = page.getByRole('textbox', { name: /username|phone|email/i });
-        await usernameInput.waitFor({ state: 'visible', timeout: 15000 });
-        await usernameInput.fill(username);
+      const passwordInput = page.getByRole('textbox', { name: /password/i });
+      await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+      await passwordInput.fill(password);
 
-        const passwordInput = page.getByRole('textbox', { name: /password/i });
-        await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
-        await passwordInput.fill(password);
+      const loginBtn = page.getByRole('button', { name: 'Log in', exact: true }).first();
+      await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
+      await loginBtn.click();
 
-        const loginBtn = page.getByRole('button', { name: 'Log in', exact: true }).first();
-        await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
-        await loginBtn.click();
+      console.log(`    [Threads attempt ${attempt}] Waiting for login...`);
+      await page.waitForTimeout(8000);
 
-        await page.waitForTimeout(6000);
-
-        // Check for login error
-        const errorText = await page.locator('[role="alert"], [data-testid="login-error"]').textContent().catch(() => null);
-        if (errorText) {
-          return { success: false, error: `Login error: ${errorText}` };
-        }
+      // Check for login error
+      const errorText = await page.locator('[role="alert"], [data-testid="login-error"]').textContent().catch(() => null);
+      if (errorText) {
+        return { success: false, error: `Login error: ${errorText}` };
       }
     }
 
-    // Wait for Create button with broader selectors and longer timeout
+    // Find Create button (may already be set from logged-in check above)
     console.log(`    [Threads attempt ${attempt}] Looking for Create button...`);
 
-    let createBtn = page.getByRole('button', { name: /create/i }).first();
-    let createVisible = await createBtn.waitFor({ state: 'visible', timeout: 30000 }).then(() => true).catch(() => false);
+    // Re-check all selector variants with longer timeouts
+    createBtn = page.getByRole('button', { name: /create/i }).first();
+    let createVisible = await createBtn.waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!createVisible) {
       createBtn = page.getByRole('link', { name: /create/i }).first();
@@ -585,9 +609,13 @@ async function executePost(slot: PostSlot): Promise<void> {
   const linkedin = await postToLinkedInBrowser(post.text);
   console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
 
-  const platforms = [bsky, masto, threads, linkedin];
+  console.log(`  Posting to Twitter/X...`);
+  const twitter = await postToTwitter(post.text);
+  console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'FAILED: ' + twitter.error}`);
+
+  const platforms = [bsky, masto, threads, linkedin, twitter];
   const succeeded = platforms.filter(p => p.success).length;
-  console.log(`  Result: ${succeeded}/4 platforms succeeded`);
+  console.log(`  Result: ${succeeded}/${platforms.length} platforms succeeded`);
 
   appendHistory({
     date: getESTDate(),
@@ -597,6 +625,7 @@ async function executePost(slot: PostSlot): Promise<void> {
     mastodon: masto,
     threads,
     linkedin,
+    twitter,
     postedAt: new Date().toISOString(),
     charCount: post.text.length,
   });
@@ -605,7 +634,7 @@ async function executePost(slot: PostSlot): Promise<void> {
 async function runSchedulerLoop(): Promise<void> {
   console.log('=== Distraction Index Social Scheduler ===');
   console.log(`Started at ${new Date().toISOString()}`);
-  console.log('Posting to: Bluesky + Mastodon + Threads + LinkedIn');
+  console.log('Posting to: Bluesky + Mastodon + Threads + LinkedIn + Twitter/X');
   console.log('Schedule: 3x/day (morning 6-8am, midday 12-2pm, evening 5-8pm EST)\n');
 
   while (true) {
@@ -677,6 +706,16 @@ async function forcePost(slot: PostSlot, skipDedupCheck = false): Promise<void> 
   }
   console.log(`Force posting for ${slot} slot...`);
   await executePost(slot);
+
+  // Update schedule state so --status reflects actual posts
+  const today = getESTDate();
+  let schedule = loadSchedule();
+  if (!schedule || schedule.date !== today) {
+    schedule = generateDailySchedule(today);
+  }
+  schedule.slots[slot].posted = true;
+  schedule.slots[slot].postTime = new Date().toISOString();
+  saveSchedule(schedule);
 }
 
 function showStatus(): void {
@@ -702,7 +741,7 @@ function showStatus(): void {
 
   console.log(`\nPosts today: ${todayPosts.length}`);
   for (const p of todayPosts) {
-    console.log(`  ${p.slot} (${p.variant}) — Bsky: ${p.bluesky.success ? 'OK' : 'FAIL'}, Masto: ${p.mastodon.success ? 'OK' : 'FAIL'}, Threads: ${p.threads?.success ? 'OK' : 'FAIL'}, LI: ${p.linkedin?.success ? 'OK' : 'FAIL'}`);
+    console.log(`  ${p.slot} (${p.variant}) — Bsky: ${p.bluesky.success ? 'OK' : 'FAIL'}, Masto: ${p.mastodon.success ? 'OK' : 'FAIL'}, Threads: ${p.threads?.success ? 'OK' : 'FAIL'}, LI: ${p.linkedin?.success ? 'OK' : 'FAIL'}, X: ${p.twitter?.success ? 'OK' : 'N/A'}`);
   }
 
   const last7 = history.filter(h => {

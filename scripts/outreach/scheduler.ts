@@ -601,9 +601,11 @@ async function executePost(slot: PostSlot): Promise<void> {
   const masto = await postToMastodon(post.text);
   console.log(`  Mastodon: ${masto.success ? 'SUCCESS' : 'FAILED: ' + masto.error}`);
 
-  console.log(`  Posting to Threads...`);
-  const threads = await postToThreadsBrowser(post.text);
-  console.log(`  Threads: ${threads.success ? 'SUCCESS' : 'FAILED: ' + threads.error}`);
+  // Threads disabled — Meta UI changes cause Playwright timeouts that block
+  // the entire posting pipeline and kill the Windows Task Scheduler job.
+  // Re-enable when Threads stabilizes or an API becomes available.
+  const threads = { success: false, error: 'Threads posting disabled (Meta UI instability)' };
+  console.log(`  Threads: SKIPPED (disabled — Meta UI instability)`);
 
   console.log(`  Posting to LinkedIn...`);
   const linkedin = await postToLinkedInBrowser(post.text);

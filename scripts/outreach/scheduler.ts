@@ -138,6 +138,23 @@ function appendHistory(record: PostRecord): void {
   writeFileSync(POST_HISTORY, JSON.stringify(trimmed, null, 2));
 }
 
+function updateLastHistoryRecord(
+  slot: PostSlot,
+  updates: { linkedin: { success: boolean; error?: string }; twitter: { success: boolean; error?: string } },
+): void {
+  const history = loadHistory();
+  const today = getESTDate();
+  // Find the most recent record for this slot+date (the one we just appended)
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].date === today && history[i].slot === slot) {
+      history[i].linkedin = updates.linkedin;
+      history[i].twitter = updates.twitter;
+      writeFileSync(POST_HISTORY, JSON.stringify(history, null, 2));
+      return;
+    }
+  }
+}
+
 async function postToBluesky(text: string): Promise<{ success: boolean; error?: string }> {
   try {
     const handle = process.env.BLUESKY_HANDLE;
@@ -585,6 +602,23 @@ function isSlotDue(schedule: ScheduleState, slot: PostSlot): boolean {
   return (currentHour > schedHour) || (currentHour === schedHour && currentMin >= schedMin);
 }
 
+// Wrap a Playwright-based platform call with a hard timeout so it can't
+// hang the entire pipeline (L240: per-platform timeouts are essential).
+const PLAYWRIGHT_TIMEOUT_MS = 60_000; // 60 seconds max per Playwright platform
+
+async function withTimeout<T>(
+  fn: () => Promise<T>,
+  timeoutMs: number,
+  label: string,
+): Promise<T> {
+  return Promise.race([
+    fn(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs / 1000}s`)), timeoutMs)
+    ),
+  ]);
+}
+
 async function executePost(slot: PostSlot): Promise<void> {
   console.log(`\n[${new Date().toISOString()}] Generating ${slot} post...`);
 
@@ -593,6 +627,7 @@ async function executePost(slot: PostSlot): Promise<void> {
   console.log(`  Content (${post.text.length} chars):`);
   console.log(`  ${post.text.substring(0, 100)}...`);
 
+  // --- Phase 1: API-based platforms (reliable, fast) ---
   console.log(`  Posting to Bluesky...`);
   const bsky = await postToBluesky(post.text);
   console.log(`  Bluesky: ${bsky.success ? 'SUCCESS' : 'FAILED: ' + bsky.error}`);
@@ -607,30 +642,56 @@ async function executePost(slot: PostSlot): Promise<void> {
   const threads = { success: false, error: 'Threads posting disabled (Meta UI instability)' };
   console.log(`  Threads: SKIPPED (disabled — Meta UI instability)`);
 
-  console.log(`  Posting to LinkedIn...`);
-  const linkedin = await postToLinkedInBrowser(post.text);
-  console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
-
-  console.log(`  Posting to Twitter/X...`);
-  const twitter = await postToTwitter(post.text);
-  console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'FAILED: ' + twitter.error}`);
-
-  const platforms = [bsky, masto, threads, linkedin, twitter];
-  const succeeded = platforms.filter(p => p.success).length;
-  console.log(`  Result: ${succeeded}/${platforms.length} platforms succeeded`);
-
-  appendHistory({
+  // Save immediately after API platforms — guarantees Bluesky + Mastodon
+  // posts are recorded even if Playwright platforms hang or crash below.
+  const record: PostRecord = {
     date: getESTDate(),
     slot,
     variant: post.variant,
     bluesky: bsky,
     mastodon: masto,
     threads,
-    linkedin,
-    twitter,
+    linkedin: { success: false, error: 'pending' },
+    twitter: { success: false, error: 'pending' },
     postedAt: new Date().toISOString(),
     charCount: post.text.length,
-  });
+  };
+  appendHistory(record);
+  console.log(`  [Checkpoint] API platforms saved to post-history.json`);
+
+  // --- Phase 2: Playwright-based platforms (may hang — 60s timeout each) ---
+  let linkedin: { success: boolean; error?: string };
+  console.log(`  Posting to LinkedIn (60s timeout)...`);
+  try {
+    linkedin = await withTimeout(
+      () => postToLinkedInBrowser(post.text),
+      PLAYWRIGHT_TIMEOUT_MS,
+      'LinkedIn',
+    );
+  } catch (e: any) {
+    linkedin = { success: false, error: e.message.substring(0, 200) };
+  }
+  console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
+
+  let twitter: { success: boolean; error?: string };
+  console.log(`  Posting to Twitter/X (60s timeout)...`);
+  try {
+    twitter = await withTimeout(
+      () => postToTwitter(post.text),
+      PLAYWRIGHT_TIMEOUT_MS,
+      'Twitter/X',
+    );
+  } catch (e: any) {
+    twitter = { success: false, error: e.message.substring(0, 200) };
+  }
+  console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'FAILED: ' + twitter.error}`);
+
+  // --- Update the saved record with Playwright platform results ---
+  updateLastHistoryRecord(slot, { linkedin, twitter });
+
+  const platforms = [bsky, masto, threads, linkedin, twitter];
+  const succeeded = platforms.filter(p => p.success).length;
+  console.log(`  Result: ${succeeded}/${platforms.length} platforms succeeded`);
 }
 
 async function runSchedulerLoop(): Promise<void> {

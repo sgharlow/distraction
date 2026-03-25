@@ -16,7 +16,7 @@ npm run test         # Run test suite (vitest)
 npm run test:watch   # Run tests in watch mode
 ```
 
-Test suite: 220 tests across 21 files using Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, and admin API routes.
+Test suite: 265 tests across Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, and admin API routes.
 
 ## Tech Stack
 

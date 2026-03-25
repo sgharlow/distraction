@@ -70,3 +70,9 @@ scripts/outreach/scheduler.log
 scripts/outreach/.linkedin-session/
 scripts/outreach/.threads-session/
 scripts/outreach/debug-screenshots/
+
+# Outreach session and log files
+scripts/outreach/.substack-session/
+scripts/outreach/cascade.log
+scripts/outreach/email-followup.log
+scripts/outreach/engage.log

@@ -10,6 +10,7 @@
  * Usage:
  *   npx tsx scripts/outreach/scheduler.ts           # Run scheduler (stays alive)
  *   npx tsx scripts/outreach/scheduler.ts --once     # Post for current slot and exit
+ *   npx tsx scripts/outreach/scheduler.ts --catchup  # Post all missed slots for today
  *   npx tsx scripts/outreach/scheduler.ts --status   # Show today's schedule
  *
  * Install as background service:
@@ -781,6 +782,58 @@ async function forcePost(slot: PostSlot, skipDedupCheck = false): Promise<void> 
   saveSchedule(schedule);
 }
 
+/**
+ * Catch-up: post all un-posted slots for today that are at or before the current time window.
+ * Called on PC wake/startup or manually via --catchup.
+ */
+async function catchupMissedSlots(): Promise<void> {
+  const today = getESTDate();
+  const hour = getESTHour();
+  const history = loadHistory();
+  const todayPosts = history.filter(h => h.date === today);
+  const postedSlots = new Set(todayPosts.map(h => h.slot));
+
+  // Determine which slots should have fired by now
+  const slotWindows: Array<{ slot: PostSlot; endHour: number }> = [
+    { slot: 'morning', endHour: 8 },
+    { slot: 'midday', endHour: 14 },
+    { slot: 'evening', endHour: 20 },
+  ];
+
+  const missedSlots = slotWindows
+    .filter(sw => hour >= sw.endHour && !postedSlots.has(sw.slot))
+    .map(sw => sw.slot);
+
+  // Also include the current active slot if not posted
+  const currentSlot = getCurrentSlot();
+  if (currentSlot && !postedSlots.has(currentSlot) && !missedSlots.includes(currentSlot)) {
+    missedSlots.push(currentSlot);
+  }
+
+  if (missedSlots.length === 0) {
+    console.log(`No missed slots to catch up (${todayPosts.length} posts today).`);
+    return;
+  }
+
+  console.log(`\n[Catch-up] ${missedSlots.length} missed slot(s) detected: ${missedSlots.join(', ')}`);
+
+  for (const slot of missedSlots) {
+    console.log(`\n[Catch-up] Posting ${slot}...`);
+    try {
+      await forcePost(slot, false);
+    } catch (err: any) {
+      console.error(`  [Catch-up] Error posting ${slot}:`, err.message);
+    }
+    // Brief pause between catch-up posts to avoid rate limits
+    if (missedSlots.indexOf(slot) < missedSlots.length - 1) {
+      console.log('  Waiting 15s before next catch-up post...');
+      await new Promise(r => setTimeout(r, 15_000));
+    }
+  }
+
+  console.log(`\n[Catch-up] Done. Posted ${missedSlots.length} catch-up slot(s).`);
+}
+
 function showStatus(): void {
   const today = getESTDate();
   const schedule = loadSchedule();
@@ -826,6 +879,8 @@ async function main() {
 
   if (args.includes('--status')) {
     showStatus();
+  } else if (args.includes('--catchup')) {
+    await catchupMissedSlots();
   } else if (args.includes('--once')) {
     await runOnce();
   } else if (args.includes('--post')) {
@@ -835,6 +890,26 @@ async function main() {
       process.exit(1);
     }
     const skipDedup = args.includes('--force');
+    // Auto catch-up earlier missed slots before posting the requested one
+    if (!args.includes('--no-catchup')) {
+      const today = getESTDate();
+      const history = loadHistory();
+      const postedSlots = new Set(history.filter(h => h.date === today).map(h => h.slot));
+      const slotOrder: PostSlot[] = ['morning', 'midday', 'evening'];
+      const targetIdx = slotOrder.indexOf(slot);
+      for (let i = 0; i < targetIdx; i++) {
+        if (!postedSlots.has(slotOrder[i])) {
+          console.log(`[Auto catch-up] Posting missed ${slotOrder[i]} slot first...`);
+          try {
+            await forcePost(slotOrder[i], false);
+            console.log('  Waiting 15s before next post...');
+            await new Promise(r => setTimeout(r, 15_000));
+          } catch (err: any) {
+            console.error(`  [Auto catch-up] Error: ${err.message}`);
+          }
+        }
+      }
+    }
     await forcePost(slot, skipDedup);
   } else {
     await runSchedulerLoop();

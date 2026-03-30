@@ -40,6 +40,8 @@
     "outreach:twitter": "npx tsx scripts/outreach/twitter-post.ts",
     "outreach:substack": "npx tsx scripts/outreach/substack-publish.ts",
     "outreach:stats": "npx tsx scripts/outreach/subscriber-stats.ts",
+    "outreach:alerts": "npx tsx scripts/outreach/event-alert.ts",
+    "outreach:alerts:dry": "npx tsx scripts/outreach/event-alert.ts --dry-run",
     "blog:generate": "npx tsx scripts/generate-blog-backlog.ts",
     "blog:generate:dry": "npx tsx scripts/generate-blog-backlog.ts --dry-run",
     "substack:publish": "npx tsx scripts/outreach/substack-publish.ts",

@@ -69,7 +69,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
         <div className="mb-4">
-          <h1 className="text-xl font-extrabold text-text-primary font-serif mb-0.5">
+          <h1 className="text-xl font-bold text-text-primary font-serif mb-0.5">
             #{decoded}
           </h1>
           <p className="text-[13px] text-text-muted m-0">
@@ -103,7 +103,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                     href={`/week/${weekId}`}
                     className="flex items-center gap-2 mb-1.5 no-underline group"
                   >
-                    <span className="text-[12px] font-bold tracking-widest text-text-dim group-hover:text-mixed transition-colors">
+                    <span className="text-[9px] font-sans font-semibold tracking-[2px] text-text-dim group-hover:text-text-primary transition-colors">
                       WEEK {weekNum}
                     </span>
                     <span className="text-[12px] text-text-muted">{weekLabel}</span>
@@ -117,12 +117,12 @@ export default async function TopicPage({ params }: TopicPageProps) {
                         <Link
                           key={event.id}
                           href={`/event/${event.id}`}
-                          className={`block bg-${color}/[0.02] border border-${color}/[0.06] rounded-md p-2.5 no-underline hover:border-${color}/15 transition-colors`}
+                          className={`block bg-${color}/[0.02] border border-${color}/[0.06] rounded-[6px] p-2.5 no-underline hover:border-${color}/15 transition-colors`}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className={`text-[10px] font-bold tracking-widest text-${color}`}>
+                                <span className={`text-[10px] font-sans font-semibold tracking-[2px] text-${color}`}>
                                   {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
                                 </span>
                                 <span className="text-[11px] text-text-dim">{event.event_date}</span>

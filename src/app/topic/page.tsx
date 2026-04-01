@@ -30,7 +30,7 @@ export default async function TopicsPage() {
     <div className="min-h-screen">
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
-        <h1 className="text-xl font-extrabold text-text-primary font-serif mb-1">
+        <h1 className="text-xl font-bold text-text-primary font-serif mb-1">
           Topics
         </h1>
         <p className="text-[13px] text-text-muted mb-4">
@@ -51,7 +51,7 @@ export default async function TopicsPage() {
                   style={{ opacity: 0.4 + intensity * 0.6 }}
                 >
                   <span
-                    className="inline-block px-2 py-1 rounded-md bg-mixed/10 border border-mixed/15 text-mixed font-mono hover:bg-mixed/20 transition-colors"
+                    className="inline-block px-2 py-1 rounded-[6px] bg-surface-overlay border border-surface-border text-text-primary font-mono hover:bg-surface-overlay transition-colors"
                     style={{
                       fontSize: `${Math.max(10, Math.min(16, 10 + (count / maxCount) * 6))}px`,
                     }}

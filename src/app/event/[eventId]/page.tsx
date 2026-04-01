@@ -112,11 +112,11 @@ export default async function EventPage({ params }: EventPageProps) {
       />
       <TopNav />
 
-      <main className="max-w-[680px] mx-auto px-4 py-5">
+      <main className="max-w-[900px] mx-auto px-5 py-5">
         {/* Back link */}
         <Link
           href={`/week/${event.week_id}`}
-          className="text-[12px] text-text-dim hover:text-text-muted no-underline mb-3 block"
+          className="font-sans text-[10px] text-text-dim hover:text-text-primary no-underline mb-3 block"
         >
           ← Back to week
         </Link>
@@ -124,16 +124,16 @@ export default async function EventPage({ params }: EventPageProps) {
         {/* Header */}
         <div className="mb-4">
           <div className="flex gap-1.5 items-center flex-wrap mb-1">
-            <span className={`text-[11.5px] font-bold uppercase tracking-widest text-${color}`}>
+            <span className={`font-sans text-[9px] font-semibold uppercase tracking-[2px] text-${color}`}>
               {listLabel}
             </span>
             {event.is_mixed && <MixedBadge />}
             <FrozenBadge frozen={event.score_frozen} version={event.score_version} />
           </div>
-          <h1 className="text-xl font-extrabold text-text-primary font-serif leading-tight m-0">
+          <h1 className="font-serif text-xl font-bold text-text-primary leading-tight m-0">
             {event.title}
           </h1>
-          <div className="text-[12.5px] text-text-dim mt-0.5">
+          <div className="font-sans text-[9px] text-text-dim mt-0.5">
             {event.event_date} · {event.article_count} sources · {Math.round((event.confidence ?? 0.8) * 100)}% confidence
           </div>
           <MechanismBadge
@@ -144,17 +144,17 @@ export default async function EventPage({ params }: EventPageProps) {
           {/* Metadata tags */}
           <div className="flex gap-1 flex-wrap mt-1">
             {event.institution && (
-              <span className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-muted font-mono">
+              <span className="font-sans text-[9px] px-1.5 py-0.5 rounded-[2px] bg-surface-overlay text-text-dim">
                 🏛 {event.institution}
               </span>
             )}
             {event.actors && event.actors.length > 0 && event.actors.map((actor) => (
-              <span key={actor} className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-muted font-mono">
+              <span key={actor} className="font-sans text-[9px] px-1.5 py-0.5 rounded-[2px] bg-surface-overlay text-text-dim">
                 👤 {actor}
               </span>
             ))}
             {event.topic_tags && event.topic_tags.length > 0 && event.topic_tags.map((tag) => (
-              <Link key={tag} href={`/topic/${encodeURIComponent(tag)}`} className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-dim font-mono no-underline hover:text-mixed hover:bg-mixed/10 transition-colors">
+              <Link key={tag} href={`/topic/${encodeURIComponent(tag)}`} className="font-sans text-[9px] px-1.5 py-0.5 rounded-[2px] bg-surface-overlay text-text-dim no-underline hover:text-text-primary hover:bg-surface-border transition-colors">
                 #{tag}
               </Link>
             ))}
@@ -181,21 +181,21 @@ export default async function EventPage({ params }: EventPageProps) {
         )}
 
         {/* Summary */}
-        <section className="bg-white/[0.03] rounded-md p-3 mb-3">
+        <section className="bg-surface-overlay rounded-[6px] p-3 mb-3">
           <SectionLabel>Summary</SectionLabel>
-          <p className="text-sm text-text-secondary leading-relaxed m-0">
+          <p className="font-serif text-[13px] text-text-secondary leading-relaxed m-0">
             {event.summary}
           </p>
         </section>
 
-        {/* Action item — promoted to top for visibility */}
+        {/* Action item */}
         {event.action_item && <ActionItem text={event.action_item} />}
 
         {/* Score rationale */}
         {event.score_rationale && (
-          <section className={`bg-${color}/[0.03] border border-${color}/[0.08] rounded-md p-3 mb-3`}>
+          <section className={`bg-${color}-light border border-surface-border rounded-[6px] p-3 mb-3`}>
             <SectionLabel className={`text-${color}`}>Why This Score</SectionLabel>
-            <p className="text-[13.5px] text-text-secondary leading-relaxed m-0 italic">
+            <p className="font-serif text-[13px] text-text-secondary leading-relaxed m-0 italic">
               {event.score_rationale}
             </p>
           </section>
@@ -203,7 +203,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* A-Score driver breakdown */}
         {event.a_components && (
-          <section className="bg-damage/[0.03] border border-damage/[0.08] rounded-md p-3 mb-2">
+          <section className="bg-damage-light border border-surface-border rounded-[6px] p-3 mb-2">
             <SectionLabel className="text-damage">A-Score Drivers</SectionLabel>
             {A_DRIVER_KEYS.map((key) => (
               <ScoreBar
@@ -215,7 +215,7 @@ export default async function EventPage({ params }: EventPageProps) {
               />
             ))}
             {event.a_components.severity && (
-              <div className="mt-1.5 px-2 py-1 bg-damage/[0.05] rounded text-[11.5px] text-damage-light font-mono">
+              <div className="mt-1.5 px-2 py-1 bg-surface-base rounded-[3px] font-sans text-[11px] text-damage">
                 Sev: durability={event.a_components.severity.durability} ·
                 reversibility={event.a_components.severity.reversibility} ·
                 precedent={event.a_components.severity.precedent}
@@ -228,7 +228,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* B-Score layer breakdown */}
         {event.b_layer1_hype && (
-          <section className="bg-distraction/[0.03] border border-distraction/[0.08] rounded-md p-3 mb-2">
+          <section className="bg-distraction-light border border-surface-border rounded-[6px] p-3 mb-2">
             <SectionLabel className="text-distraction">B-Score: Layer 1 — Hype (55%)</SectionLabel>
             {B_LAYER1_KEYS.map((key) => (
               <ScoreBar
@@ -241,7 +241,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
             {event.b_layer2_distraction && (
               <>
-                <div className="text-[11.5px] font-bold tracking-widest text-distraction mt-3 mb-1.5">
+                <div className="font-sans text-[9px] font-semibold tracking-[2px] uppercase text-distraction mt-3 mb-1.5">
                   Layer 2 — Strategic (45%)
                 </div>
                 {B_LAYER2_KEYS.map((key) => (
@@ -256,7 +256,7 @@ export default async function EventPage({ params }: EventPageProps) {
             )}
 
             {event.b_intentionality_score != null && (
-              <div className="mt-1.5 px-2 py-1 bg-distraction/[0.05] rounded text-[11.5px] text-distraction-light font-mono">
+              <div className="mt-1.5 px-2 py-1 bg-surface-base rounded-[3px] font-sans text-[11px] text-distraction">
                 Intentionality: {event.b_intentionality_score}/15 →{' '}
                 {event.b_intentionality_score >= 8
                   ? 'Full (0.45)'
@@ -270,17 +270,17 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* Smokescreen connections */}
         {event.smokescreen_for.length > 0 && (
-          <section className="bg-damage/[0.03] border border-damage/[0.12] rounded-md p-3 mb-2">
+          <section className="bg-damage-light border border-surface-border rounded-[6px] p-3 mb-2">
             <SectionLabel className="text-damage">Covering For</SectionLabel>
             {event.smokescreen_for.map((pair) => (
-              <div key={pair.id} className="py-1 border-t border-damage/[0.08] first:border-t-0">
+              <div key={pair.id} className="py-1 border-t border-surface-border-light first:border-t-0">
                 <Link
                   href={`/event/${pair.damage_event.id}`}
-                  className="text-[13.5px] text-damage-light font-semibold no-underline hover:underline"
+                  className="font-serif text-[13px] text-damage font-semibold no-underline hover:underline"
                 >
                   {pair.damage_event.title}
                 </Link>
-                <div className="text-[11.5px] text-text-muted font-mono">
+                <div className="font-sans text-[9px] text-text-muted">
                   SI: {pair.smokescreen_index.toFixed(1)}{' '}
                   {pair.smokescreen_index > 50 ? '🔴' : '🟡'}
                   {pair.displacement_confidence != null && (
@@ -300,17 +300,17 @@ export default async function EventPage({ params }: EventPageProps) {
         )}
 
         {event.smokescreened_by.length > 0 && (
-          <section className="bg-distraction/[0.03] border border-distraction/[0.12] rounded-md p-3 mb-2">
+          <section className="bg-distraction-light border border-surface-border rounded-[6px] p-3 mb-2">
             <SectionLabel className="text-distraction">Smokescreened By</SectionLabel>
             {event.smokescreened_by.map((pair) => (
-              <div key={pair.id} className="py-1 border-t border-distraction/[0.08] first:border-t-0">
+              <div key={pair.id} className="py-1 border-t border-surface-border-light first:border-t-0">
                 <Link
                   href={`/event/${pair.distraction_event.id}`}
-                  className="text-[13.5px] text-distraction-light font-semibold no-underline hover:underline"
+                  className="font-serif text-[13px] text-distraction font-semibold no-underline hover:underline"
                 >
                   {pair.distraction_event.title}
                 </Link>
-                <div className="text-[11.5px] text-text-muted font-mono">
+                <div className="font-sans text-[9px] text-text-muted">
                   SI: {pair.smokescreen_index.toFixed(1)}
                 </div>
               </div>
@@ -320,10 +320,10 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* Score history */}
         {event.score_history.length > 0 && (
-          <section className="bg-white/[0.02] rounded-md p-2.5 mb-2">
+          <section className="bg-surface-overlay rounded-[6px] p-2.5 mb-2">
             <SectionLabel className="text-text-dim">Score History</SectionLabel>
             {event.score_history.map((change) => (
-              <div key={change.id} className="text-[12.5px] text-text-muted font-mono">
+              <div key={change.id} className="font-sans text-[11px] text-text-dim">
                 v{change.version_after} {new Date(change.changed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}:{' '}
                 A={change.new_a_score?.toFixed(1) ?? '—'} B={change.new_b_score?.toFixed(1) ?? '—'}{' '}
                 ({change.changed_by}){change.reason ? ` — ${change.reason}` : ''}
@@ -334,13 +334,13 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* Correction notice */}
         {event.correction_notice && (
-          <section className="bg-distraction/[0.05] border border-distraction/20 rounded-md p-3 mb-2">
+          <section className="bg-distraction-light border border-surface-border rounded-[6px] p-3 mb-2">
             <SectionLabel className="text-distraction">Correction</SectionLabel>
-            <p className="text-[13.5px] text-text-secondary leading-relaxed m-0">
+            <p className="font-serif text-[13px] text-text-secondary leading-relaxed m-0">
               {event.correction_notice}
             </p>
             {event.correction_at && (
-              <div className="text-[11px] text-text-dim mt-1">
+              <div className="font-sans text-[9px] text-text-dim mt-1">
                 Issued: {new Date(event.correction_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
             )}
@@ -349,18 +349,18 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* Factual claims */}
         {event.factual_claims && event.factual_claims.length > 0 && (
-          <section className="bg-white/[0.03] rounded-md p-3 mb-2">
+          <section className="bg-surface-overlay rounded-[6px] p-3 mb-2">
             <SectionLabel className="text-text-dim">Factual Claims</SectionLabel>
             <div className="space-y-1">
               {event.factual_claims.map((fc, i) => (
                 <div key={i} className="flex gap-1.5 text-[13px]">
-                  <span className={fc.verified ? 'text-live' : 'text-text-dim'}>
+                  <span className={fc.verified ? 'text-action' : 'text-text-dim'}>
                     {fc.verified ? '✓' : '○'}
                   </span>
                   <div>
                     <span className="text-text-secondary">{fc.claim}</span>
                     {fc.source && (
-                      <span className="text-text-dim ml-1 text-[11.5px]">— {fc.source}</span>
+                      <span className="text-text-dim ml-1 text-[11px]">— {fc.source}</span>
                     )}
                   </div>
                 </div>
@@ -371,7 +371,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
         {/* Articles */}
         {event.articles.length > 0 && (
-          <section className="bg-white/[0.02] rounded-md p-2.5 mb-2">
+          <section className="bg-surface-overlay rounded-[6px] p-2.5 mb-2">
             <SectionLabel className="text-text-dim">Sources ({event.articles.length})</SectionLabel>
             <div className="space-y-1">
               {event.articles.map((article) => (
@@ -380,12 +380,12 @@ export default async function EventPage({ params }: EventPageProps) {
                     href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-text-secondary hover:text-text-primary no-underline hover:underline"
+                    className="text-text-primary underline hover:text-damage"
                   >
                     {article.headline || article.url}
                   </a>
                   {article.publisher && (
-                    <span className="text-text-dim ml-1">— {article.publisher}</span>
+                    <span className="text-text-dim ml-1 font-sans text-[9px]">— {article.publisher}</span>
                   )}
                 </div>
               ))}
@@ -400,7 +400,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
 function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`text-[11.5px] font-bold uppercase tracking-widest mb-1 ${className ?? 'text-text-muted'}`}>
+    <div className={`font-sans text-[9px] font-semibold uppercase tracking-[2px] mb-1 ${className ?? 'text-text-dim'}`}>
       {children}
     </div>
   );

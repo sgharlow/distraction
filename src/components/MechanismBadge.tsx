@@ -12,11 +12,11 @@ export function MechanismBadge({ mechanism, scope, affectedPopulation }: Mechani
 
   return (
     <div className="flex gap-1 flex-wrap mt-0.5">
-      <span className="text-[11.5px] bg-gray-700 text-text-secondary px-1.5 py-px rounded">
+      <span className="font-sans text-[9px] bg-surface-overlay text-text-secondary px-1.5 py-px rounded-[2px]">
         {MECHANISM_LABELS[mechanism]}
       </span>
       {scope && (
-        <span className="text-[11.5px] bg-gray-800 text-text-muted px-1.5 py-px rounded">
+        <span className="font-sans text-[9px] bg-surface-overlay text-text-muted px-1.5 py-px rounded-[2px]">
           {scope.replace('_', ' ')}{affectedPopulation ? ` · ${affectedPopulation}` : ''}
         </span>
       )}

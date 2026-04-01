@@ -70,7 +70,7 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
         {/* Week nav */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-extrabold text-text-primary font-serif mb-0.5">
+            <h1 className="text-xl font-bold text-text-primary font-serif mb-0.5">
               Smokescreen Map — Week {weekNum}
             </h1>
             <p className="text-[13px] text-text-muted m-0">
@@ -82,7 +82,7 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
             {prevWeek ? (
               <Link
                 href={`/smokescreen?week=${prevWeek.week_id}`}
-                className="px-2 py-1 rounded border border-surface-border bg-white/[0.04] text-[12.5px] font-semibold text-text-muted hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+                className="px-2 py-1 rounded border border-surface-border bg-surface-overlay text-[12.5px] font-semibold text-text-muted hover:text-text-primary hover:border-text-dim transition-colors no-underline"
               >
                 ◀ Prev
               </Link>
@@ -92,7 +92,7 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
             {nextWeek ? (
               <Link
                 href={`/smokescreen?week=${nextWeek.week_id}`}
-                className="px-2 py-1 rounded border border-surface-border bg-white/[0.04] text-[12.5px] font-semibold text-text-muted hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+                className="px-2 py-1 rounded border border-surface-border bg-surface-overlay text-[12.5px] font-semibold text-text-muted hover:text-text-primary hover:border-text-dim transition-colors no-underline"
               >
                 Next ▶
               </Link>
@@ -115,19 +115,19 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
               const isCritical = si > 50;
               const dc = pair.displacement_confidence ?? 0;
               const dispLabel = dc >= 0.7 ? 'HIGH' : dc >= 0.4 ? 'MED' : 'LOW';
-              const dispColor = dc >= 0.7 ? 'text-live' : dc >= 0.4 ? 'text-distraction' : 'text-text-dim';
+              const dispColor = dc >= 0.7 ? 'text-action' : dc >= 0.4 ? 'text-distraction' : 'text-text-dim';
 
               return (
                 <div
                   key={pair.id}
-                  className={`bg-surface-raised border rounded-lg p-3 ${
+                  className={`bg-surface-raised border rounded-[6px] p-3 ${
                     isCritical ? 'border-damage/15' : 'border-distraction/15'
                   }`}
                 >
                   {/* SI header */}
                   <div className="text-center mb-2">
                     <span
-                      className={`text-[12.5px] font-extrabold tracking-widest ${
+                      className={`text-[9px] font-sans font-semibold tracking-[2px] ${
                         isCritical ? 'text-damage' : si >= 25 ? 'text-distraction' : 'text-text-muted'
                       }`}
                     >
@@ -143,9 +143,9 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
                     {/* Distraction side */}
                     <Link
                       href={`/event/${pair.distraction_event.id}`}
-                      className="flex-1 bg-distraction/[0.03] border border-distraction/[0.06] rounded-md p-2 no-underline hover:border-distraction/15 transition-colors"
+                      className="flex-1 bg-distraction/[0.03] border border-distraction/[0.06] rounded-[6px] p-2 no-underline hover:border-distraction/15 transition-colors"
                     >
-                      <div className="text-[10.5px] font-bold tracking-widest text-distraction mb-0.5">
+                      <div className="text-[9px] font-sans font-semibold tracking-[2px] text-distraction mb-0.5">
                         DISTRACTION
                       </div>
                       <div className="text-[13.5px] text-text-primary font-semibold leading-tight">
@@ -164,9 +164,9 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
                     {/* Damage side */}
                     <Link
                       href={`/event/${pair.damage_event.id}`}
-                      className="flex-1 bg-damage/[0.03] border border-damage/[0.06] rounded-md p-2 no-underline hover:border-damage/15 transition-colors"
+                      className="flex-1 bg-damage/[0.03] border border-damage/[0.06] rounded-[6px] p-2 no-underline hover:border-damage/15 transition-colors"
                     >
-                      <div className="text-[10.5px] font-bold tracking-widest text-damage mb-0.5">
+                      <div className="text-[9px] font-sans font-semibold tracking-[2px] text-damage mb-0.5">
                         REAL DAMAGE
                       </div>
                       <div className="text-[13.5px] text-text-primary font-semibold leading-tight">

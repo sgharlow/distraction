@@ -9,13 +9,13 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <span
-      className={`text-[12px] font-bold px-2 py-px rounded-full border ${
+      className={`font-sans text-[9px] font-semibold px-1.5 py-px rounded-[3px] ${
         isLive
-          ? 'text-live bg-live/[0.08] border-live/20'
-          : 'text-text-dim bg-white/[0.03] border-white/[0.06]'
+          ? 'text-white bg-action'
+          : 'text-text-dim bg-surface-overlay'
       }`}
     >
-      {isLive ? '🟢 LIVE' : '🔒 FROZEN'}
+      {isLive ? 'LIVE' : 'FROZEN'}
     </span>
   );
 }

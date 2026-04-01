@@ -1,44 +1,50 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Brand colors from spec / prototype */
-  --color-damage: #DC2626;
-  --color-damage-light: #FCA5A5;
-  --color-distraction: #D97706;
-  --color-distraction-light: #FDE68A;
-  --color-noise: #6B7280;
-  --color-noise-light: #9CA3AF;
-  --color-mixed: #818CF8;
-  --color-mixed-light: #A78BFA;
-  --color-action: #059669;
-  --color-action-light: #ECFDF5;
-  --color-live: #22C55E;
+  /* Magazine Theme — Semantic Colors */
+  --color-damage: #8B2020;
+  --color-damage-light: #F0E0DC;
+  --color-distraction: #3D5A80;
+  --color-distraction-light: #E8E0F0;
+  --color-noise: #888888;
+  --color-noise-light: #EEEEEE;
+  --color-mixed: #8B4513;
+  --color-mixed-light: #F0EDE6;
+  --color-action: #2A5A2A;
+  --color-action-light: #E0EDDF;
+  --color-live: #2A5A2A;
 
-  /* Dark theme surfaces */
-  --color-surface-base: #050510;
-  --color-surface-raised: #08081a;
-  --color-surface-overlay: #0a0a1a;
-  --color-surface-border: #1e1e3a;
-  --color-surface-border-light: #2e2e50;
+  /* Surfaces */
+  --color-surface-base: #FAF8F4;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-overlay: #F0EDE6;
+  --color-surface-border: #DDDDDD;
+  --color-surface-border-light: #EEEEEE;
 
   /* Text */
-  --color-text-primary: #F3F4F6;
-  --color-text-secondary: #D1D5DB;
-  --color-text-muted: #9CA3AF;
-  --color-text-dim: #838B98;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-muted: #AAAAAA;
+  --color-text-dim: #888888;
+  --color-text-quiet: #CCCCCC;
 
-  /* Fonts */
-  --font-serif: Georgia, "Times New Roman", serif;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-  --font-sans: var(--font-geist-sans);
+  /* Heavy border for section dividers */
+  --color-border-heavy: #1A1A1A;
+
+  /* Fonts — system fonts only, no web fonts */
+  --font-serif: Palatino, 'Palatino Linotype', Georgia, serif;
+  --font-sans: Helvetica, Arial, sans-serif;
+  --font-mono: Helvetica, Arial, sans-serif;
 }
 
 body {
   background-color: var(--color-surface-base);
   color: var(--color-text-primary);
+  font-family: var(--font-serif);
+  line-height: 1.5;
 }
 
-/* Scrollbar styling for dark theme */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -49,10 +55,72 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-surface-border-light);
+  background: var(--color-surface-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-noise);
+  background: var(--color-text-muted);
+}
+
+/* Editorial prose styling for blog posts and content pages */
+.prose-editorial {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.prose-editorial h2 {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 24px 0 8px;
+}
+
+.prose-editorial h3 {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 20px 0 6px;
+}
+
+.prose-editorial p {
+  margin: 0 0 12px;
+}
+
+.prose-editorial ul,
+.prose-editorial ol {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.prose-editorial li {
+  margin-bottom: 4px;
+}
+
+.prose-editorial a {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+.prose-editorial a:hover {
+  color: var(--color-damage);
+}
+
+.prose-editorial strong {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.prose-editorial em {
+  font-style: italic;
+}
+
+/* Pull quote emphasis */
+.font-serif em {
+  color: var(--color-damage);
+  font-style: italic;
 }

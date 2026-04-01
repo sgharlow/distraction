@@ -12,7 +12,7 @@ export function FrozenBadge({ frozen, version, className }: FrozenBadgeProps) {
   return (
     <span
       className={cn(
-        'text-[10.5px] bg-gray-700 text-text-muted px-1 py-px rounded',
+        'font-sans text-[9px] bg-surface-overlay text-text-muted px-1 py-px rounded-[2px]',
         className
       )}
     >

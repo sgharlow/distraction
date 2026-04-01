@@ -14,12 +14,12 @@ export function WeekBriefing({ snapshot, topDamage, topDistraction }: WeekBriefi
   if (!briefing) return null;
 
   return (
-    <div className="bg-mixed/[0.03] border-b border-mixed/[0.08] py-2 px-4">
-      <div className="max-w-[1200px] mx-auto">
-        <div className="text-[12px] font-extrabold text-mixed tracking-widest mb-0.5">
-          THIS WEEK IN 30 SECONDS
+    <div className="max-w-[900px] mx-auto px-5 mb-2">
+      <div className="bg-surface-overlay rounded-[6px] px-3 py-2">
+        <div className="font-sans text-[9px] font-semibold tracking-[2px] uppercase text-mixed mb-0.5">
+          This Week in 30 Seconds
         </div>
-        <p className="text-sm text-text-secondary leading-relaxed m-0">
+        <p className="font-serif text-sm text-text-secondary leading-relaxed m-0">
           {briefing}
         </p>
       </div>

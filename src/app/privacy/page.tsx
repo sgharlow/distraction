@@ -24,17 +24,17 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen">
       <TopNav />
-      <main className="mx-auto max-w-[720px] px-4 py-6">
-        <h1 className="mb-1 font-serif text-xl font-extrabold text-text-primary">
+      <main className="mx-auto max-w-[900px] px-5 py-6">
+        <h1 className="mb-1 font-serif text-xl font-bold text-text-primary">
           Privacy Policy
         </h1>
-        <p className="text-[13px] text-text-dim mb-5">
+        <p className="font-sans text-[9px] text-text-dim tracking-[0.5px] uppercase mb-5">
           Last updated: February 2026
         </p>
 
-        <div className="space-y-5 text-[14px] text-text-secondary leading-relaxed">
+        <div className="space-y-5 text-[13px] text-text-secondary leading-relaxed">
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Overview</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Overview</h2>
             <p>
               The Distraction Index is committed to protecting your privacy. This policy
               explains what data we collect, how we use it, and your rights regarding
@@ -43,23 +43,23 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Data We Collect</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Data We Collect</h2>
 
-            <h3 className="text-[14px] font-bold text-text-primary mt-3 mb-1">Email Addresses</h3>
+            <h3 className="font-serif text-[13px] font-bold text-text-primary mt-3 mb-1">Email Addresses</h3>
             <p>
               If you subscribe to our mailing list, we store your email address in our
               database. We use this solely to send you updates about The Distraction Index.
               We do not sell, share, or provide your email address to any third party.
             </p>
 
-            <h3 className="text-[14px] font-bold text-text-primary mt-3 mb-1">Contact Form Submissions</h3>
+            <h3 className="font-serif text-[13px] font-bold text-text-primary mt-3 mb-1">Contact Form Submissions</h3>
             <p>
               If you submit a message through our contact form, we store your name, email
               address, and message content to respond to your inquiry. This data is not
               shared with third parties.
             </p>
 
-            <h3 className="text-[14px] font-bold text-text-primary mt-3 mb-1">Analytics</h3>
+            <h3 className="font-serif text-[13px] font-bold text-text-primary mt-3 mb-1">Analytics</h3>
             <p>
               We use Vercel Analytics to understand how visitors use the site. This collects
               anonymized, aggregated data such as page views and visit duration. It does not
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Data We Do Not Collect</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Data We Do Not Collect</h2>
             <ul className="pl-4 space-y-1 m-0">
               <li>We do not use advertising trackers or third-party cookies.</li>
               <li>We do not collect personal data beyond what you voluntarily provide.</li>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Data Storage</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Data Storage</h2>
             <p>
               Data is stored on Supabase (PostgreSQL) infrastructure hosted in the United
               States. The site is served through Vercel&apos;s global CDN.
@@ -85,18 +85,18 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Your Rights</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Your Rights</h2>
             <p>
               You may request deletion of your data at any time by contacting us through
               the{' '}
-              <Link href="/contact" className="text-mixed hover:underline">
+              <Link href="/contact" className="text-text-primary underline hover:text-damage">
                 contact page
               </Link>. We will remove your information within 30 days of your request.
             </p>
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Open Source</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Open Source</h2>
             <p>
               The complete source code for this site, including data handling logic, is
               publicly available on{' '}
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
                 href="https://github.com/sgharlow/distraction"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-mixed hover:underline"
+                className="text-text-primary underline hover:text-damage"
               >
                 GitHub
               </a>. You can verify exactly how your data is processed.
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-text-primary mb-2">Changes</h2>
+            <h2 className="font-serif text-base font-bold text-text-primary mb-2">Changes</h2>
             <p>
               If this policy changes, we will update the &ldquo;Last updated&rdquo; date above.
               Continued use of the site after changes constitutes acceptance of the

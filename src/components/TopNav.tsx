@@ -2,29 +2,26 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="border-b border-surface-border py-2.5 px-4">
-      <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-1.5">
-        <Link href="/week/current" className="no-underline shrink-0">
-          <Image
-            src="/logo.png"
-            alt="The Distraction Index"
-            width={240}
-            height={56}
-            priority
-            className="h-10 w-auto sm:h-14"
-          />
+    <header className="border-b border-surface-border pb-2.5 pt-3 px-5">
+      <div className="max-w-[900px] mx-auto flex items-baseline justify-between gap-2.5 flex-wrap">
+        <Link href="/week/current" className="no-underline shrink-0 flex items-baseline gap-2.5">
+          <span className="font-serif text-4xl font-bold leading-none tracking-[-2px] text-text-primary">
+            DI
+          </span>
+          <span className="font-sans text-sm font-bold tracking-[-0.3px] text-text-primary">
+            The Distraction Index
+          </span>
         </Link>
 
         {/* Hamburger button — visible only on mobile */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden flex flex-col gap-[3px] p-1.5 rounded border border-surface-border bg-white/[0.04] cursor-pointer"
+          className="md:hidden flex flex-col gap-[3px] p-1.5 cursor-pointer bg-transparent border-none"
           aria-label="Toggle navigation"
           aria-expanded={menuOpen}
         >
@@ -33,8 +30,8 @@ export function TopNav() {
           <span className={`block w-4 h-[2px] bg-text-dim transition-transform ${menuOpen ? '-rotate-45 -translate-y-[5px]' : ''}`} />
         </button>
 
-        {/* Desktop nav — hidden on mobile */}
-        <nav className="hidden md:flex gap-0.5 flex-wrap">
+        {/* Desktop nav */}
+        <nav className="hidden md:flex gap-2.5 font-sans text-[10px]">
           <NavLink href="/week/current" label="Dashboard" />
           <NavLink href="/undercovered" label="Undercovered" />
           <NavLink href="/smokescreen" label="Smokescreen" />
@@ -52,7 +49,7 @@ export function TopNav() {
 
       {/* Mobile nav dropdown */}
       {menuOpen && (
-        <nav className="md:hidden flex flex-col gap-1 mt-2 pt-2 border-t border-surface-border">
+        <nav className="md:hidden flex flex-col gap-1 mt-2 pt-2 border-t border-surface-border font-sans text-[10px]">
           <NavLink href="/week/current" label="Dashboard" onClick={() => setMenuOpen(false)} />
           <NavLink href="/undercovered" label="Undercovered" onClick={() => setMenuOpen(false)} />
           <NavLink href="/smokescreen" label="Smokescreen" onClick={() => setMenuOpen(false)} />
@@ -76,7 +73,7 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
     <Link
       href={href}
       onClick={onClick}
-      className="px-2.5 py-1 rounded border border-surface-border bg-white/[0.04] text-[12.5px] font-semibold text-text-muted hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+      className="text-text-dim hover:text-text-primary transition-colors no-underline py-0.5"
     >
       {label}
     </Link>

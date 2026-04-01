@@ -18,12 +18,12 @@ export function AttentionBudget({ aScore, bScore }: AttentionBudgetProps) {
     color = 'text-damage';
     label = 'UNDERCOVERED';
   } else {
-    color = 'text-mixed';
+    color = 'text-text-dim';
     label = 'BALANCED';
   }
 
   return (
-    <span className={`text-[11.5px] font-bold tracking-wide ${color}`}>
+    <span className={`font-sans text-[9px] font-semibold tracking-[0.5px] ${color}`}>
       {ab > 0 ? '+' : ''}{ab.toFixed(0)} {label}
     </span>
   );

@@ -11,11 +11,12 @@ export function SmokescreenAlert({ snapshot }: SmokescreenAlertProps) {
   const severity = si > 50 ? 'CRITICAL' : 'SIGNIFICANT';
 
   return (
-    <div className="bg-damage/5 border-b border-damage/10 py-1.5 px-4">
-      <div className="max-w-[1200px] mx-auto flex items-center gap-1.5">
-        <span className="text-[13px]">⚠️</span>
-        <span className="text-[12.5px] text-damage-light">
-          <strong>Smokescreen:</strong>{' '}
+    <div className="max-w-[900px] mx-auto px-5 mt-2">
+      <div className="bg-damage-light rounded-[6px] px-3 py-2 flex items-center gap-1.5 flex-wrap">
+        <span className="font-sans text-[9px] font-semibold uppercase tracking-[1px] text-damage">
+          Smokescreen Alert
+        </span>
+        <span className="text-xs text-text-primary font-serif">
           {snapshot.top_smokescreen_pair ?? 'Active pairing detected'} · SI: {si.toFixed(1)}{' '}
           <span className="font-bold">{severity}</span>
         </span>

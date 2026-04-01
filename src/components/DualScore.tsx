@@ -11,45 +11,41 @@ interface DualScoreProps {
 export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, showSeverity = false }: DualScoreProps) {
   const a = aScore ?? 0;
   const b = bScore ?? 0;
-  const aUp = a >= b;
   const lg = size === 'lg';
 
+  // Conditional highlighting: bold + color only when score > 50
+  const aHighlight = a > 50;
+  const bHighlight = b > 50;
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       {/* A score */}
       <div
         className={cn(
-          'rounded text-center border',
+          'text-center border rounded-[3px]',
           lg ? 'px-3 py-1.5 min-w-[68px]' : 'px-1.5 py-0.5 min-w-[40px]',
-          aUp
-            ? 'bg-damage/10 border-damage/30'
-            : 'bg-damage/[0.03] border-damage/10'
+          aHighlight
+            ? 'bg-damage-light border-damage'
+            : 'bg-surface-overlay border-surface-border'
         )}
       >
+        <div className="font-sans text-[10px] text-text-dim">A</div>
         <div
           className={cn(
-            'font-semibold text-damage opacity-70',
-            lg ? 'text-sm' : 'text-[11.5px]'
-          )}
-        >
-          A
-        </div>
-        <div
-          className={cn(
-            'font-mono text-damage',
+            'font-sans',
             lg ? 'text-2xl' : 'text-[15px]',
-            aUp ? 'font-black opacity-100' : 'font-medium opacity-40'
+            aHighlight ? 'font-bold text-damage' : 'text-text-muted'
           )}
         >
           {aScore?.toFixed(1) ?? '—'}
         </div>
         {showLabels && (
-          <div className="text-[10px] text-damage opacity-50 leading-tight">
+          <div className="font-sans text-[9px] text-text-muted leading-tight">
             Constitutional Damage
           </div>
         )}
         {showSeverity && aScore != null && (
-          <div className="text-[10.5px] font-bold text-damage leading-tight mt-0.5">
+          <div className={cn('font-sans text-[10px] font-bold leading-tight mt-0.5', aHighlight ? 'text-damage' : 'text-text-muted')}>
             {getSeverityLabel(aScore)}
           </div>
         )}
@@ -58,37 +54,30 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
       {/* B score */}
       <div
         className={cn(
-          'rounded text-center border',
+          'text-center border rounded-[3px]',
           lg ? 'px-3 py-1.5 min-w-[68px]' : 'px-1.5 py-0.5 min-w-[40px]',
-          !aUp
-            ? 'bg-distraction/10 border-distraction/30'
-            : 'bg-distraction/[0.03] border-distraction/10'
+          bHighlight
+            ? 'bg-distraction-light border-distraction'
+            : 'bg-surface-overlay border-surface-border'
         )}
       >
+        <div className="font-sans text-[10px] text-text-dim">B</div>
         <div
           className={cn(
-            'font-semibold text-distraction opacity-70',
-            lg ? 'text-sm' : 'text-[11.5px]'
-          )}
-        >
-          B
-        </div>
-        <div
-          className={cn(
-            'font-mono text-distraction',
+            'font-sans',
             lg ? 'text-2xl' : 'text-[15px]',
-            !aUp ? 'font-black opacity-100' : 'font-medium opacity-40'
+            bHighlight ? 'font-bold text-distraction' : 'text-text-muted'
           )}
         >
           {bScore?.toFixed(1) ?? '—'}
         </div>
         {showLabels && (
-          <div className="text-[10px] text-distraction opacity-50 leading-tight">
+          <div className="font-sans text-[9px] text-text-muted leading-tight">
             Media Hype
           </div>
         )}
         {showSeverity && bScore != null && (
-          <div className="text-[10.5px] font-bold text-distraction leading-tight mt-0.5">
+          <div className={cn('font-sans text-[10px] font-bold leading-tight mt-0.5', bHighlight ? 'text-distraction' : 'text-text-muted')}>
             {getSeverityLabel(bScore)}
           </div>
         )}

@@ -15,7 +15,6 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
   const [hasWebShare, setHasWebShare] = useState(false);
   const [origin, setOrigin] = useState(SITE_URL);
 
-  // Check for Web Share API on mount (client-side only)
   useEffect(() => {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       setHasWebShare(true);
@@ -47,7 +46,7 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
 
   const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(fullUrl)}`;
 
-  const btnClass = 'bg-white/[0.04] border border-surface-border text-text-muted text-[12px] px-2.5 py-1 rounded hover:text-text-primary hover:border-surface-border-light transition-colors cursor-pointer';
+  const btnClass = 'font-sans border border-surface-border text-text-dim text-[10px] px-2 py-0.5 rounded-[3px] hover:text-text-primary hover:border-text-dim transition-colors cursor-pointer bg-transparent no-underline';
 
   return (
     <div className="flex gap-1.5 items-center">
@@ -55,7 +54,7 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
         href={tweetUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${btnClass} no-underline`}
+        className={btnClass}
       >
         Share on X
       </a>

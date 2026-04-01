@@ -12,23 +12,20 @@ const listConfig = {
   A: {
     label: 'Real Damage',
     tag: 'Constitutional Threats',
-    colorBg: 'bg-damage/[0.03]',
-    colorBorder: 'border-damage/[0.08]',
     colorText: 'text-damage',
+    borderColor: 'border-damage',
   },
   B: {
     label: 'Distractions',
     tag: 'Manufactured Outrage',
-    colorBg: 'bg-distraction/[0.03]',
-    colorBorder: 'border-distraction/[0.08]',
     colorText: 'text-distraction',
+    borderColor: 'border-distraction',
   },
   C: {
     label: 'Noise Floor',
     tag: 'Low Impact',
-    colorBg: 'bg-noise/[0.03]',
-    colorBorder: 'border-noise/[0.08]',
-    colorText: 'text-noise',
+    colorText: 'text-text-dim',
+    borderColor: 'border-text-dim',
   },
 };
 
@@ -54,43 +51,42 @@ export function ListColumn({ list, events, staleDaysThreshold }: ListColumnProps
 
   return (
     <div className="min-w-0">
-      <div className={`${config.colorBg} border ${config.colorBorder} rounded-lg p-2.5`}>
-        <div className="text-center mb-2.5">
-          <div className={`text-sm font-extrabold uppercase tracking-widest ${config.colorText}`}>
-            {config.label}
-          </div>
-          <div className="text-[11.5px] text-text-dim">
-            {config.tag} · {events.length} {events.length === 1 ? 'event' : 'events'}
-          </div>
-        </div>
-
-        {events.length === 0 && (
-          <div className="text-center text-surface-border-light text-sm py-5">
-            No events this week
-          </div>
-        )}
-
-        {recentEvents.map((event, i) => (
-          <EventCard key={event.id} event={event} list={list} rank={i + 1} />
-        ))}
-
-        {staleEvents.length > 0 && (
-          <>
-            <div className="flex items-center gap-2 my-2">
-              <span className="flex-1 border-t border-surface-border" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-text-dim">
-                Older
-              </span>
-              <span className="flex-1 border-t border-surface-border" />
-            </div>
-            <div className="opacity-50">
-              {staleEvents.map((event, i) => (
-                <EventCard key={event.id} event={event} list={list} rank={recentEvents.length + i + 1} />
-              ))}
-            </div>
-          </>
-        )}
+      {/* Section header with heavy bottom border */}
+      <div className="flex justify-between items-baseline border-b-2 border-border-heavy pb-1 mb-2">
+        <span className={`font-sans text-[9px] font-semibold tracking-[2px] uppercase ${config.colorText}`}>
+          {config.label}
+        </span>
+        <span className="font-sans text-[9px] text-text-muted">
+          {events.length} {events.length === 1 ? 'event' : 'events'}
+        </span>
       </div>
+
+      {events.length === 0 && (
+        <div className="text-center text-text-muted text-sm py-5 font-serif">
+          No events this week
+        </div>
+      )}
+
+      {recentEvents.map((event, i) => (
+        <EventCard key={event.id} event={event} list={list} rank={i + 1} />
+      ))}
+
+      {staleEvents.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 my-2">
+            <span className="flex-1 border-t border-surface-border" />
+            <span className="font-sans text-[9px] font-semibold uppercase tracking-[2px] text-text-muted">
+              Older
+            </span>
+            <span className="flex-1 border-t border-surface-border" />
+          </div>
+          <div className="opacity-50">
+            {staleEvents.map((event, i) => (
+              <EventCard key={event.id} event={event} list={list} rank={recentEvents.length + i + 1} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

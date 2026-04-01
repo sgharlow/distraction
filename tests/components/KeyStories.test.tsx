@@ -76,9 +76,9 @@ describe('KeyStories', () => {
       <KeyStories topDamage={damage} topDistraction={distraction} topSmokescreenPair={null} />
     );
 
-    expect(screen.getByText('Top Damage')).toBeInTheDocument();
+    expect(screen.getByText(/Top Damage/)).toBeInTheDocument();
     expect(screen.getByText('Executive Order Signed')).toBeInTheDocument();
-    expect(screen.getByText('Top Distraction')).toBeInTheDocument();
+    expect(screen.getByText(/Top Distraction/)).toBeInTheDocument();
     expect(screen.getByText('Celebrity Tweet Storm')).toBeInTheDocument();
   });
 
@@ -109,7 +109,7 @@ describe('KeyStories', () => {
       <KeyStories topDamage={damage} topDistraction={distraction} topSmokescreenPair={smokescreenPair} />
     );
 
-    expect(screen.getByText('Smokescreen Pair')).toBeInTheDocument();
+    expect(screen.getByText('Smokescreen')).toBeInTheDocument();
     expect(screen.getByText('is obscuring')).toBeInTheDocument();
     expect(screen.getByText('SI: 45.2')).toBeInTheDocument();
   });
@@ -121,7 +121,7 @@ describe('KeyStories', () => {
       <KeyStories topDamage={damage} topDistraction={null} topSmokescreenPair={null} />
     );
 
-    expect(screen.queryByText('Smokescreen Pair')).not.toBeInTheDocument();
+    expect(screen.queryByText('Smokescreen')).not.toBeInTheDocument();
   });
 
   it('links to event detail pages', () => {

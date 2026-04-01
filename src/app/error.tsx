@@ -31,7 +31,7 @@ export default function RootError({
             />
           </svg>
         </div>
-        <h2 className="text-lg font-extrabold text-text-primary font-serif mb-1.5">
+        <h2 className="text-lg font-bold text-text-primary font-serif mb-1.5">
           Something went wrong
         </h2>
         <p className="text-[12px] text-text-dim leading-relaxed mb-4">
@@ -40,7 +40,7 @@ export default function RootError({
         </p>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-mixed/10 border border-mixed/20 rounded-md text-[12px] font-semibold text-mixed hover:bg-mixed/20 transition-colors cursor-pointer"
+          className="px-4 py-2 bg-surface-overlay border border-surface-border rounded-[6px] text-[12px] font-semibold text-text-primary hover:text-damage transition-colors cursor-pointer"
         >
           Try again
         </button>

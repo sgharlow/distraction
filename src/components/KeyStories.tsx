@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import type { Event, SmokescreenPair } from '@/lib/types';
-import { DualScore } from './DualScore';
 
 interface SmokescreenPairData {
   pair: SmokescreenPair & {
@@ -15,107 +14,91 @@ interface KeyStoriesProps {
   topSmokescreenPair: SmokescreenPairData | null;
 }
 
-const cardStyles = {
-  damage: {
-    bg: 'bg-damage/[0.03]',
-    border: 'border-damage/[0.08]',
-    hoverBorder: 'hover:border-damage/20',
-    text: 'text-damage',
-    label: 'Top Damage',
-  },
-  distraction: {
-    bg: 'bg-distraction/[0.03]',
-    border: 'border-distraction/[0.08]',
-    hoverBorder: 'hover:border-distraction/20',
-    text: 'text-distraction',
-    label: 'Top Distraction',
-  },
-  smokescreen: {
-    bg: 'bg-mixed/[0.03]',
-    border: 'border-mixed/[0.08]',
-    hoverBorder: 'hover:border-mixed/20',
-    text: 'text-mixed',
-    label: 'Smokescreen Pair',
-  },
-};
+function ScoreDisplay({ label, score, threshold, colorClass }: {
+  label: string;
+  score: number | null;
+  threshold: number;
+  colorClass: string;
+}) {
+  const val = score ?? 0;
+  const highlight = val > threshold;
+  return (
+    <span className={`font-sans text-[10px] ${highlight ? `font-bold ${colorClass}` : 'text-text-muted'}`}>
+      {label}: {score?.toFixed(1) ?? '—'}
+    </span>
+  );
+}
 
 export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: KeyStoriesProps) {
   if (!topDamage && !topDistraction) return null;
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 py-2.5">
-      <div className="text-[11.5px] font-bold uppercase tracking-widest text-text-muted mb-2">
-        This Week&apos;s Key Stories
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        {/* Top Damage */}
-        {topDamage && (
-          <Link
-            href={`/event/${topDamage.id}`}
-            className={`${cardStyles.damage.bg} border ${cardStyles.damage.border} ${cardStyles.damage.hoverBorder} rounded-lg p-3 no-underline transition-colors block`}
-          >
-            <div className={`text-[11px] font-bold uppercase tracking-widest ${cardStyles.damage.text} mb-1`}>
-              {cardStyles.damage.label}
-            </div>
-            <div className="text-[15px] text-text-primary font-bold leading-tight mb-1.5 line-clamp-2">
-              {topDamage.title}
-            </div>
-            {topDamage.summary && (
-              <p className="text-[12.5px] text-text-dim leading-relaxed m-0 mb-2 line-clamp-2">
-                {topDamage.summary}
-              </p>
-            )}
-            <div className="text-[11.5px] text-text-dim mb-1">
-              {topDamage.article_count} {topDamage.article_count === 1 ? 'source' : 'sources'}
-            </div>
-            <DualScore aScore={topDamage.a_score} bScore={topDamage.b_score} showLabels />
-          </Link>
-        )}
+    <div className="max-w-[900px] mx-auto px-5 mb-4">
+      {/* Double-rule divider */}
+      <div className="border-t-[3px] border-double border-border-heavy pt-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {/* Top Damage */}
+          {topDamage && (
+            <Link href={`/event/${topDamage.id}`} className="no-underline block">
+              <div className="font-sans text-[8px] font-semibold tracking-[2.5px] uppercase text-damage mb-1.5">
+                Top Damage · A: {topDamage.a_score?.toFixed(1)}
+              </div>
+              <div className="font-serif text-base font-bold leading-[1.25] text-text-primary mb-1">
+                {topDamage.title}
+              </div>
+              {topDamage.summary && (
+                <p className="text-[11px] font-serif text-text-secondary leading-[1.4] m-0 mb-1.5 line-clamp-2">
+                  {topDamage.summary}
+                </p>
+              )}
+              <div className="flex gap-1.5 items-center">
+                <ScoreDisplay label="A" score={topDamage.a_score} threshold={50} colorClass="text-damage" />
+                <ScoreDisplay label="B" score={topDamage.b_score} threshold={50} colorClass="text-distraction" />
+                <span className="font-sans text-[9px] text-text-muted">
+                  {topDamage.article_count} {topDamage.article_count === 1 ? 'src' : 'srcs'}
+                </span>
+              </div>
+            </Link>
+          )}
 
-        {/* Top Distraction */}
-        {topDistraction && (
-          <Link
-            href={`/event/${topDistraction.id}`}
-            className={`${cardStyles.distraction.bg} border ${cardStyles.distraction.border} ${cardStyles.distraction.hoverBorder} rounded-lg p-3 no-underline transition-colors block`}
-          >
-            <div className={`text-[11px] font-bold uppercase tracking-widest ${cardStyles.distraction.text} mb-1`}>
-              {cardStyles.distraction.label}
-            </div>
-            <div className="text-[15px] text-text-primary font-bold leading-tight mb-1.5 line-clamp-2">
-              {topDistraction.title}
-            </div>
-            {topDistraction.summary && (
-              <p className="text-[12.5px] text-text-dim leading-relaxed m-0 mb-2 line-clamp-2">
-                {topDistraction.summary}
-              </p>
-            )}
-            <div className="text-[11.5px] text-text-dim mb-1">
-              {topDistraction.article_count} {topDistraction.article_count === 1 ? 'source' : 'sources'}
-            </div>
-            <DualScore aScore={topDistraction.a_score} bScore={topDistraction.b_score} showLabels />
-          </Link>
-        )}
+          {/* Top Distraction */}
+          {topDistraction && (
+            <Link href={`/event/${topDistraction.id}`} className="no-underline block">
+              <div className="font-sans text-[8px] font-semibold tracking-[2.5px] uppercase text-distraction mb-1.5">
+                Top Distraction · B: {topDistraction.b_score?.toFixed(1)}
+              </div>
+              <div className="font-serif text-base font-bold leading-[1.25] text-text-primary mb-1">
+                {topDistraction.title}
+              </div>
+              {topDistraction.summary && (
+                <p className="text-[11px] font-serif text-text-secondary leading-[1.4] m-0 mb-1.5 line-clamp-2">
+                  {topDistraction.summary}
+                </p>
+              )}
+              <div className="flex gap-1.5 items-center">
+                <ScoreDisplay label="A" score={topDistraction.a_score} threshold={50} colorClass="text-damage" />
+                <ScoreDisplay label="B" score={topDistraction.b_score} threshold={50} colorClass="text-distraction" />
+                <span className="font-sans text-[9px] text-text-muted">
+                  {topDistraction.article_count} {topDistraction.article_count === 1 ? 'src' : 'srcs'}
+                </span>
+              </div>
+            </Link>
+          )}
+        </div>
 
-        {/* Smokescreen Pair */}
+        {/* Smokescreen pair callout */}
         {topSmokescreenPair && (
-          <Link
-            href={`/smokescreen`}
-            className={`${cardStyles.smokescreen.bg} border ${cardStyles.smokescreen.border} ${cardStyles.smokescreen.hoverBorder} rounded-lg p-3 no-underline transition-colors block`}
-          >
-            <div className={`text-[11px] font-bold uppercase tracking-widest ${cardStyles.smokescreen.text} mb-1`}>
-              {cardStyles.smokescreen.label}
-            </div>
-            <div className="text-sm text-distraction font-bold leading-tight mb-0.5">
-              {topSmokescreenPair.pair.distraction_event.title}
-            </div>
-            <div className="text-[11.5px] text-text-dim mb-0.5">is obscuring</div>
-            <div className="text-sm text-damage font-bold leading-tight mb-1.5">
-              {topSmokescreenPair.pair.damage_event.title}
-            </div>
-            <div className="text-[12px] font-mono text-mixed">
+          <div className="bg-surface-overlay rounded-[6px] px-3 py-2.5 mt-3 flex items-center gap-1.5 flex-wrap text-xs font-serif">
+            <span className="font-sans text-[9px] font-semibold uppercase tracking-[1px] text-mixed">
+              Smokescreen
+            </span>
+            <span className="font-bold">{topSmokescreenPair.pair.distraction_event.title}</span>
+            <span className="text-damage italic text-[11px]">is obscuring</span>
+            <span className="font-bold">{topSmokescreenPair.pair.damage_event.title}</span>
+            <span className="font-sans text-[10px] font-semibold bg-text-primary text-surface-base px-2 py-px rounded-[3px]">
               SI: {topSmokescreenPair.pair.smokescreen_index.toFixed(1)}
-            </div>
-          </Link>
+            </span>
+          </div>
         )}
       </div>
     </div>

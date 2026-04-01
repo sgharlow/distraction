@@ -35,25 +35,25 @@ export default async function CorrectionsPage() {
   return (
     <div className="min-h-screen">
       <TopNav />
-      <main className="mx-auto max-w-[820px] px-4 py-6">
-        <h1 className="mb-1 font-serif text-xl font-extrabold text-text-primary">Corrections</h1>
-        <p className="mb-5 text-[13.5px] text-text-muted">
-          Post-freeze corrections across all weekly editions. Original scores are always preserved.
+      <main className="mx-auto max-w-[900px] px-5 py-6">
+        <h1 className="mb-1 font-serif text-xl font-bold text-text-primary">Corrections</h1>
+        <p className="font-sans text-[9px] text-text-dim tracking-[0.5px] uppercase mb-5">
+          Post-freeze corrections · Original scores always preserved
         </p>
 
         {items.length === 0 ? (
-          <div className="bg-surface-raised border border-surface-border rounded-lg p-5 text-center">
-            <div className="text-[12px] font-bold uppercase tracking-widest text-text-muted mb-1.5">
+          <div className="bg-surface-overlay border border-surface-border rounded-[6px] p-5 text-center">
+            <div className="font-sans text-[9px] font-semibold uppercase tracking-[2px] text-text-dim mb-1.5">
               No Corrections
             </div>
-            <p className="text-[13.5px] text-text-dim leading-relaxed m-0 mb-2">
+            <p className="text-[13px] text-text-secondary leading-relaxed m-0 mb-2">
               Corrections appear here when frozen weekly editions require
               factual corrections. Once a week is frozen, scores are immutable —
               but factual errors can be noted as append-only corrections.
             </p>
             <Link
               href="/week/current"
-              className="text-[12.5px] text-mixed hover:underline no-underline"
+              className="font-sans text-[11px] text-text-primary underline hover:text-damage no-underline"
             >
               Back to Dashboard
             </Link>
@@ -63,17 +63,17 @@ export default async function CorrectionsPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="bg-distraction/[0.03] border border-distraction/[0.08] rounded-md p-3"
+                className="bg-distraction-light border border-surface-border rounded-[6px] p-3"
               >
-                <div className="text-sm font-bold text-text-primary">{item.title}</div>
-                <div className="text-[11.5px] text-text-dim mt-0.5">
+                <div className="font-serif text-sm font-bold text-text-primary">{item.title}</div>
+                <div className="font-sans text-[9px] text-text-dim mt-0.5">
                   Week: {item.week_id} · List {item.primary_list} · A:{item.a_score?.toFixed(1)} B:{item.b_score?.toFixed(1)}
                 </div>
                 <p className="text-[13px] text-text-secondary leading-relaxed mt-1 m-0">
                   {item.correction_notice}
                 </p>
                 {item.correction_at && (
-                  <div className="text-[11px] text-text-dim mt-1">
+                  <div className="font-sans text-[9px] text-text-dim mt-1">
                     Issued: {new Date(item.correction_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
                 )}

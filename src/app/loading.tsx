@@ -3,7 +3,7 @@ export default function RootLoading() {
     <div className="min-h-screen">
       {/* TopNav skeleton */}
       <header className="border-b border-surface-border py-2.5 px-4">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-1.5">
+        <div className="max-w-[900px] mx-auto flex items-center justify-between gap-1.5">
           <div>
             <div className="h-6 w-48 bg-surface-border rounded animate-pulse" />
             <div className="h-3 w-56 bg-surface-border/60 rounded animate-pulse mt-1" />
@@ -20,19 +20,19 @@ export default function RootLoading() {
       </header>
 
       {/* Stats bar skeleton */}
-      <div className="max-w-[1200px] mx-auto px-4 py-3">
+      <div className="max-w-[900px] mx-auto px-4 py-3">
         <div className="flex gap-3 flex-wrap">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-10 w-28 bg-surface-raised border border-surface-border rounded-md animate-pulse"
+              className="h-10 w-28 bg-surface-raised border border-surface-border rounded-[6px] animate-pulse"
             />
           ))}
         </div>
       </div>
 
       {/* Three-column card grid skeleton */}
-      <div className="max-w-[1200px] mx-auto px-4 py-2.5">
+      <div className="max-w-[900px] mx-auto px-4 py-2.5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
           {/* Column A */}
           <div className="space-y-2">
@@ -40,7 +40,7 @@ export default function RootLoading() {
             {Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-damage/[0.02] border border-damage/[0.06] rounded-md p-3"
+                className="bg-damage/[0.02] border border-damage/[0.06] rounded-[6px] p-3"
               >
                 <div className="h-2.5 w-12 bg-damage/10 rounded animate-pulse mb-2" />
                 <div className="h-4 w-full bg-surface-border/50 rounded animate-pulse mb-1.5" />
@@ -54,7 +54,7 @@ export default function RootLoading() {
             {Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-distraction/[0.02] border border-distraction/[0.06] rounded-md p-3"
+                className="bg-distraction/[0.02] border border-distraction/[0.06] rounded-[6px] p-3"
               >
                 <div className="h-2.5 w-12 bg-distraction/10 rounded animate-pulse mb-2" />
                 <div className="h-4 w-full bg-surface-border/50 rounded animate-pulse mb-1.5" />
@@ -68,7 +68,7 @@ export default function RootLoading() {
             {Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-noise/[0.02] border border-noise/[0.06] rounded-md p-3"
+                className="bg-noise/[0.02] border border-noise/[0.06] rounded-[6px] p-3"
               >
                 <div className="h-2.5 w-12 bg-noise/10 rounded animate-pulse mb-2" />
                 <div className="h-4 w-full bg-surface-border/50 rounded animate-pulse mb-1.5" />

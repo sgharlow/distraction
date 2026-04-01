@@ -99,7 +99,7 @@ describe('WeekBriefing', () => {
       <WeekBriefing snapshot={snapshot} topDamage={[topA]} topDistraction={[topB]} />,
     );
 
-    expect(screen.getByText('THIS WEEK IN 30 SECONDS')).toBeInTheDocument();
+    expect(screen.getByText('This Week in 30 Seconds')).toBeInTheDocument();
     expect(screen.getByText(/Big Damage/)).toBeInTheDocument();
     expect(screen.getByText(/Shiny Distraction/)).toBeInTheDocument();
   });
@@ -112,8 +112,8 @@ describe('WeekBriefing', () => {
       <WeekBriefing snapshot={snapshot} topDamage={[topA]} topDistraction={[]} />,
     );
 
-    const header = screen.getByText('THIS WEEK IN 30 SECONDS');
+    const header = screen.getByText('This Week in 30 Seconds');
     expect(header.className).toContain('text-mixed');
-    expect(header.className).toContain('tracking-widest');
+    expect(header.className).toContain('tracking-[2px]');
   });
 });

@@ -55,24 +55,29 @@ export function WeekStatsBar({ snapshot, priorSnapshot }: WeekStatsBarProps) {
   ];
 
   return (
-    <div className="bg-white/[0.02] border-b border-white/[0.03] py-1.5 px-4">
-      <div className="max-w-[1200px] mx-auto flex gap-3 justify-center flex-wrap">
-        {stats.map((stat) => (
-          <div key={stat.label} className="text-center">
-            <div className={`text-base font-extrabold font-mono ${stat.color || 'text-text-primary'}`}>
-              {stat.value}
-            </div>
-            {stat.delta && stat.delta !== '—' && (
-              <div className={`text-[10px] font-mono ${stat.delta.startsWith('+') ? 'text-text-muted' : 'text-text-dim'}`}>
-                {stat.delta}
-              </div>
-            )}
-            <div className="text-[10.5px] text-text-dim uppercase tracking-wide">
-              {stat.label}
-            </div>
-          </div>
-        ))}
+    <div className="border-l-2 border-border-heavy pl-3">
+      <div className="font-sans text-[9px] tracking-[2px] uppercase text-text-dim mb-2">
+        By the Numbers
       </div>
+      {stats.map((stat) => (
+        <div key={stat.label} className="flex items-baseline justify-between mb-1.5">
+          <div className="flex items-baseline gap-1">
+            <span className={`font-sans text-base font-bold ${stat.color || 'text-text-primary'}`}>
+              {stat.value}
+            </span>
+            <span className="font-sans text-[9px] uppercase tracking-[0.5px] text-text-dim">
+              {stat.label}
+            </span>
+          </div>
+          {stat.delta && stat.delta !== '—' && (
+            <span className={`font-sans text-[10px] ${
+              stat.delta.startsWith('+') ? 'text-action' : 'text-damage'
+            }`}>
+              {stat.delta}
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

@@ -9,7 +9,7 @@ describe('NewsletterSignup', () => {
 
   it('renders the signup form', () => {
     render(<NewsletterSignup />);
-    expect(screen.getByText('WEEKLY BRIEFING')).toBeInTheDocument();
+    expect(screen.getByText('Weekly Briefing')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
     expect(screen.getByText('SUBSCRIBE')).toBeInTheDocument();
   });
@@ -26,7 +26,7 @@ describe('NewsletterSignup', () => {
     fireEvent.click(screen.getByText('SUBSCRIBE'));
 
     await waitFor(() => {
-      expect(screen.getByText("YOU'RE IN")).toBeInTheDocument();
+      expect(screen.getByText(/you're in/i)).toBeInTheDocument();
     });
   });
 
@@ -42,7 +42,7 @@ describe('NewsletterSignup', () => {
     fireEvent.click(screen.getByText('SUBSCRIBE'));
 
     await waitFor(() => {
-      expect(screen.getByText('ALREADY SUBSCRIBED')).toBeInTheDocument();
+      expect(screen.getByText(/already subscribed/i)).toBeInTheDocument();
     });
   });
 
@@ -93,7 +93,7 @@ describe('NewsletterSignup', () => {
 
     resolvePromise!({ json: async () => ({ status: 'subscribed' }) } as Response);
     await waitFor(() => {
-      expect(screen.getByText("YOU'RE IN")).toBeInTheDocument();
+      expect(screen.getByText(/you're in/i)).toBeInTheDocument();
     });
   });
 });

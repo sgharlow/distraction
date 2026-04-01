@@ -49,7 +49,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     <div className="min-h-screen">
       <TopNav />
       <main className="max-w-[860px] mx-auto px-4 py-6">
-        <h1 className="text-xl font-extrabold text-text-primary font-serif mb-3">
+        <h1 className="text-xl font-bold text-text-primary font-serif mb-3">
           Search Events
         </h1>
 
@@ -61,11 +61,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               name="q"
               defaultValue={q}
               placeholder="Search events, topics, summaries..."
-              className="flex-1 bg-surface-raised border border-surface-border rounded-md px-3 py-2 text-[15px] text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-mixed/40 transition-colors"
+              className="flex-1 bg-surface-raised border border-surface-border rounded-[6px] px-3 py-2 text-[15px] text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-mixed/40 transition-colors"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-mixed/10 border border-mixed/20 rounded-md text-sm font-semibold text-mixed hover:bg-mixed/20 transition-colors"
+              className="px-4 py-2 bg-surface-overlay border border-surface-border rounded-[6px] text-sm font-semibold text-mixed hover:bg-mixed/20 transition-colors"
             >
               Search
             </button>
@@ -91,12 +91,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <Link
                   key={event.id}
                   href={`/event/${event.id}`}
-                  className={`block bg-${color}/[0.02] border border-${color}/[0.06] rounded-md p-2.5 no-underline hover:border-${color}/15 transition-colors`}
+                  className={`block bg-${color}/[0.02] border border-${color}/[0.06] rounded-[6px] p-2.5 no-underline hover:border-${color}/15 transition-colors`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={`text-[10px] font-bold tracking-widest text-${color}`}>
+                        <span className={`text-[10px] font-sans font-semibold tracking-[2px] text-${color}`}>
                           {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
                         </span>
                         <span className="text-[11px] text-text-dim">

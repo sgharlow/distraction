@@ -25,14 +25,14 @@ export function FirstVisitExplainer() {
   };
 
   return (
-    <div className="bg-mixed/[0.03] border-b border-mixed/[0.08]">
-      <div className="max-w-[1200px] mx-auto px-4 py-3">
+    <div className="bg-surface-overlay border-b border-surface-border">
+      <div className="max-w-[900px] mx-auto px-5 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] font-bold uppercase tracking-widest text-mixed mb-1">
+            <div className="font-sans text-[9px] font-semibold uppercase tracking-[2px] text-mixed mb-1">
               What is the Distraction Index?
             </div>
-            <p className="text-[13.5px] text-text-secondary leading-relaxed m-0">
+            <p className="font-serif text-[13px] text-text-secondary leading-relaxed m-0">
               Every event gets two scores: <strong className="text-damage">A-score</strong> measures
               real constitutional damage (institutional erosion, rule-of-law threats),
               while <strong className="text-distraction">B-score</strong> measures manufactured media
@@ -40,14 +40,14 @@ export function FirstVisitExplainer() {
               damage), <strong className="text-distraction">List B</strong> (distractions),
               or <strong className="text-noise">Noise</strong> based on which score dominates.
               {' '}
-              <Link href="/methodology" className="text-mixed hover:underline">
+              <Link href="/methodology" className="text-text-primary underline hover:text-damage">
                 Full methodology
               </Link>
             </p>
           </div>
           <button
             onClick={handleDismiss}
-            className="text-[12px] px-2.5 py-1 rounded border border-mixed/20 text-mixed hover:bg-mixed/10 transition-colors cursor-pointer bg-mixed/[0.06] whitespace-nowrap"
+            className="font-sans text-[10px] px-2.5 py-1 rounded-[3px] border border-surface-border text-text-dim hover:text-text-primary hover:border-text-dim transition-colors cursor-pointer bg-transparent whitespace-nowrap"
           >
             Got it
           </button>

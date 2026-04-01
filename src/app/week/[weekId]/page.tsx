@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation';
 import { TopNav } from '@/components/TopNav';
 import { FirstVisitExplainer } from '@/components/FirstVisitExplainer';
 import { WeekSelector } from '@/components/WeekSelector';
-import { WeekStatsBar } from '@/components/WeekStatsBar';
+import { HeroPullQuote } from '@/components/HeroPullQuote';
 import { WeekSummary } from '@/components/WeekSummary';
 import { SmokescreenAlert } from '@/components/SmokescreenAlert';
 import { NarrativeStrips } from '@/components/NarrativeStrips';
@@ -80,13 +80,11 @@ export default async function WeekPage({ params }: WeekPageProps) {
     : null;
 
   const weekNum = getWeekNumber(weekStart);
-  const label = getWeekLabel(weekStart);
-  const weekNumber = weekNum;
   const weekIdStr = wid;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Dataset',
-    name: `Distraction Index — Week ${weekNumber}`,
+    name: `Distraction Index — Week ${weekNum}`,
     description: `Political events scored for constitutional damage and media distraction. Week of ${weekIdStr}.`,
     url: `https://distractionindex.org/week/${weekIdStr}`,
     datePublished: snapshot?.created_at,
@@ -105,14 +103,14 @@ export default async function WeekPage({ params }: WeekPageProps) {
       <FirstVisitExplainer />
       <main>
 
-      {/* Week selector — needs all weeks for navigation */}
+      {/* Week selector */}
       {snapshot && allWeeks.length > 0 && (
         <WeekSelector allWeeks={allWeeks} currentSnapshot={snapshot} />
       )}
 
       {/* Share buttons */}
       {snapshot && (
-        <div className="max-w-[1200px] mx-auto px-4 flex justify-end py-1">
+        <div className="max-w-[900px] mx-auto px-5 flex justify-end py-1">
           <ShareButtons url={`/week/${wid}`} title={`Distraction Index — Week ${getWeekNumber(weekStart)}: ${getWeekLabel(weekStart)}`} />
         </div>
       )}
@@ -123,20 +121,30 @@ export default async function WeekPage({ params }: WeekPageProps) {
       {/* Weekly summary (frozen weeks) */}
       {snapshot && <WeekSummary snapshot={snapshot} />}
 
-      {/* Stats bar */}
-      {snapshot && <WeekStatsBar snapshot={snapshot} priorSnapshot={priorSnapshot} />}
-
       {/* Main content */}
       {weekData ? (
         <>
-          {/* Live briefing (live weeks only — mutually exclusive with frozen WeekSummary) */}
+          {/* Hero: Pull-quote + sidebar stats */}
+          <HeroPullQuote
+            snapshot={weekData.snapshot}
+            priorSnapshot={priorSnapshot}
+            topDamage={weekData.events.A[0] ?? null}
+            topDistraction={weekData.events.B[0] ?? null}
+            topSmokescreenPair={
+              weekData.smokescreenPairs[0]?.smokescreen_index >= 25
+                ? { pair: weekData.smokescreenPairs[0] }
+                : null
+            }
+          />
+
+          {/* Live briefing (live weeks only) */}
           <WeekBriefing
             snapshot={weekData.snapshot}
             topDamage={weekData.events.A}
             topDistraction={weekData.events.B}
           />
 
-          {/* Narrative strips */}
+          {/* Narrative strips: Look at this / They want you to look at */}
           <NarrativeStrips
             topDamage={weekData.events.A}
             topDistraction={weekData.events.B}
@@ -153,7 +161,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
             }
           />
 
-          {/* Three-column dashboard */}
+          {/* Three-column full index */}
           <FullIndexToggle>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               <ListColumn list="A" events={weekData.events.A} staleDaysThreshold={live ? 14 : undefined} />
@@ -172,7 +180,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
         /* Empty state */
         <div className="max-w-[600px] mx-auto text-center py-16 px-5">
           <div className="text-4xl mb-3">📭</div>
-          <h2 className="text-lg text-text-primary font-serif font-extrabold mb-1.5">
+          <h2 className="text-lg text-text-primary font-serif font-bold mb-1.5">
             Week {getWeekNumber(weekStart)}: {getWeekLabel(weekStart)}
           </h2>
           <p className="text-[13px] text-text-dim leading-relaxed">

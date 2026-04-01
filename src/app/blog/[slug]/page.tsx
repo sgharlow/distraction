@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getBlogPost, getAllBlogPosts } from '@/lib/data/blog';
 import { getWeekNumber } from '@/lib/weeks';
+import { TopNav } from '@/components/TopNav';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
 
 interface BlogPostPageProps {
@@ -62,43 +63,44 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   };
 
   return (
-    <>
+    <div className="min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="max-w-3xl mx-auto px-4 py-12">
-        <Link href="/blog" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-action)]">
+      <TopNav />
+      <main className="max-w-[900px] mx-auto px-5 py-6">
+        <Link href="/blog" className="font-sans text-[10px] text-text-muted hover:text-text-primary no-underline">
           &larr; Back to blog
         </Link>
 
-        <article className="mt-6">
-          <h1 className="text-3xl font-bold mb-3">{post.title}</h1>
+        <article className="mt-4">
+          <h1 className="font-serif text-xl font-bold text-text-primary mb-2">{post.title}</h1>
 
-          <div className="flex items-center gap-3 mb-8 text-sm text-[var(--color-text-muted)]">
+          <div className="flex items-center gap-3 mb-6 font-sans text-[9px] text-text-muted">
             <time dateTime={post.published_at}>
               {new Date(post.published_at).toLocaleDateString('en-US', {
                 year: 'numeric', month: 'long', day: 'numeric',
               })}
             </time>
             {weekNum && (
-              <Link href={`/week/${post.week_id}`} className="hover:text-[var(--color-action)]">
+              <Link href={`/week/${post.week_id}`} className="text-text-primary hover:text-damage no-underline">
                 Week {weekNum} Report &rarr;
               </Link>
             )}
           </div>
 
           <div
-            className="prose prose-invert max-w-none"
+            className="prose-editorial"
             dangerouslySetInnerHTML={{ __html: html }}
           />
 
           {post.week_id && (
-            <div className="mt-8 p-4 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)]">
-              <p className="font-semibold mb-2">See the full interactive report</p>
+            <div className="mt-6 p-3 rounded-[6px] bg-surface-overlay border border-surface-border">
+              <p className="font-serif text-[13px] font-bold mb-1 text-text-primary">See the full interactive report</p>
               <Link
                 href={`/week/${post.week_id}`}
-                className="text-[var(--color-action)] hover:underline"
+                className="font-serif text-[13px] text-text-primary underline hover:text-damage"
               >
                 Week {weekNum}: Full scores, smokescreen pairs, and source citations &rarr;
               </Link>
@@ -108,7 +110,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
         <NewsletterSignup />
       </main>
-    </>
+    </div>
   );
 }
 
@@ -134,5 +136,5 @@ function inlineFormat(text: string): string {
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-[var(--color-action)] hover:underline">$1</a>');
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-[#1A1A1A] underline hover:text-[#8B2020]">$1</a>');
 }

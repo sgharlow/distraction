@@ -84,7 +84,7 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         {/* Week nav */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-extrabold text-text-primary font-serif mb-0.5">
+            <h1 className="text-xl font-bold text-text-primary font-serif mb-0.5">
               Undercovered High-Damage
             </h1>
             <p className="text-[13px] text-text-muted m-0">
@@ -96,7 +96,7 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
             {prevWeek ? (
               <Link
                 href={`/undercovered?week=${prevWeek.week_id}`}
-                className="px-2 py-1 rounded border border-surface-border bg-white/[0.04] text-[12.5px] font-semibold text-text-muted hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+                className="px-2 py-1 rounded border border-surface-border bg-surface-overlay text-[12.5px] font-semibold text-text-muted hover:text-text-primary hover:border-text-dim transition-colors no-underline"
               >
                 ◀ Prev
               </Link>
@@ -106,7 +106,7 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
             {nextWeek ? (
               <Link
                 href={`/undercovered?week=${nextWeek.week_id}`}
-                className="px-2 py-1 rounded border border-surface-border bg-white/[0.04] text-[12.5px] font-semibold text-text-muted hover:text-mixed hover:border-mixed/25 transition-colors no-underline"
+                className="px-2 py-1 rounded border border-surface-border bg-surface-overlay text-[12.5px] font-semibold text-text-muted hover:text-text-primary hover:border-text-dim transition-colors no-underline"
               >
                 Next ▶
               </Link>
@@ -126,14 +126,14 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         {/* Tier 1: Undercovered (AB < -15) — highlighted */}
         {undercovered.length > 0 && (
           <div className="space-y-1.5 mb-4">
-            <div className="text-[11.5px] font-bold uppercase tracking-widest text-damage mb-1">
+            <div className="text-[9px] font-sans font-semibold uppercase tracking-[2px] text-damage mb-1">
               Undercovered ({undercovered.length})
             </div>
             {undercovered.map((event) => (
               <Link
                 key={event.id}
                 href={`/event/${event.id}`}
-                className="block bg-damage/[0.03] border border-damage/[0.08] rounded-lg p-3 no-underline hover:border-damage/20 transition-colors"
+                className="block bg-damage/[0.03] border border-damage/[0.08] rounded-[6px] p-3 no-underline hover:border-damage/20 transition-colors"
               >
                 <div className="flex justify-between items-start gap-2">
                   <div>
@@ -167,14 +167,14 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         {/* Tier 2: All other List A events — muted style */}
         {otherListA.length > 0 && (
           <div className="space-y-1.5">
-            <div className="text-[11.5px] font-bold uppercase tracking-widest text-text-dim mb-1">
+            <div className="text-[9px] font-sans font-semibold uppercase tracking-[2px] text-text-dim mb-1">
               All List A Events ({otherListA.length})
             </div>
             {otherListA.map((event) => (
               <Link
                 key={event.id}
                 href={`/event/${event.id}`}
-                className="block bg-white/[0.02] border border-surface-border rounded-lg p-3 no-underline hover:border-damage/15 transition-colors"
+                className="block bg-surface-overlay border border-surface-border rounded-[6px] p-3 no-underline hover:border-damage/15 transition-colors"
               >
                 <div className="flex justify-between items-start gap-2">
                   <div>
@@ -202,8 +202,8 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
 
         {/* Empty state — only when no List A events at all */}
         {undercovered.length === 0 && otherListA.length === 0 && (
-          <div className="bg-surface-raised border border-surface-border rounded-lg p-5 text-center">
-            <div className="text-[12px] font-bold uppercase tracking-widest text-text-muted mb-1.5">
+          <div className="bg-surface-raised border border-surface-border rounded-[6px] p-5 text-center">
+            <div className="text-[9px] font-sans font-semibold uppercase tracking-[2px] text-text-muted mb-1.5">
               No List A Events
             </div>
             <p className="text-[13.5px] text-text-dim leading-relaxed m-0 mb-2">
@@ -212,7 +212,7 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
             </p>
             <Link
               href="/week/current"
-              className="text-[12.5px] text-mixed hover:underline no-underline"
+              className="text-[12.5px] text-text-primary underline hover:text-damage"
             >
               Back to Dashboard
             </Link>

@@ -6,29 +6,52 @@ interface NarrativeStripsProps {
 }
 
 export function NarrativeStrips({ topDamage, topDistraction }: NarrativeStripsProps) {
-  const damageText = topDamage.slice(0, 2).map((e) => e.title).join(' · ');
-  const distractionText = topDistraction.slice(0, 2).map((e) => e.title).join(' · ');
+  const damageItems = topDamage.slice(0, 2);
+  const distractionItems = topDistraction.slice(0, 2);
 
-  if (!damageText && !distractionText) return null;
+  if (!damageItems.length && !distractionItems.length) return null;
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 pt-2 flex gap-2 flex-wrap">
-      {damageText && (
-        <div className="flex-1 min-w-[250px] bg-damage/[0.03] border border-damage/[0.08] rounded-md px-2.5 py-1.5">
-          <div className="text-[11.5px] font-extrabold text-damage tracking-widest mb-px">
-            LOOK AT THIS
+    <div className="max-w-[900px] mx-auto px-5 mb-3.5">
+      <div className="bg-surface-overlay rounded-[6px] px-3 py-2.5 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Look at this (real damage) */}
+        {damageItems.length > 0 && (
+          <div>
+            <div className="font-sans text-[8px] font-semibold tracking-[2px] uppercase text-action mb-1">
+              Look at this
+            </div>
+            {damageItems.map((e, i) => (
+              <div
+                key={e.id}
+                className={`text-[11px] font-serif leading-[1.4] ${
+                  i > 0 ? 'text-text-dim mt-0.5' : 'text-text-primary'
+                }`}
+              >
+                {e.title}
+              </div>
+            ))}
           </div>
-          <div className="text-[13.5px] text-damage-light">{damageText}</div>
-        </div>
-      )}
-      {distractionText && (
-        <div className="flex-1 min-w-[250px] bg-distraction/[0.03] border border-distraction/[0.08] rounded-md px-2.5 py-1.5">
-          <div className="text-[11.5px] font-extrabold text-distraction tracking-widest mb-px">
-            THEY WANT YOU TO LOOK AT
+        )}
+
+        {/* They want you to look at (distractions) */}
+        {distractionItems.length > 0 && (
+          <div>
+            <div className="font-sans text-[8px] font-semibold tracking-[2px] uppercase text-damage mb-1">
+              They want you to look at
+            </div>
+            {distractionItems.map((e, i) => (
+              <div
+                key={e.id}
+                className={`text-[11px] font-serif leading-[1.4] ${
+                  i > 0 ? 'text-text-dim mt-0.5' : 'text-text-primary'
+                }`}
+              >
+                {e.title}
+              </div>
+            ))}
           </div>
-          <div className="text-[13.5px] text-distraction-light">{distractionText}</div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -66,25 +66,25 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
   const weekNum = getWeekNum(currentSnapshot.week_start);
 
   return (
-    <div className="bg-surface-overlay border-b border-surface-border py-2 px-4">
-      <div className="max-w-[1200px] mx-auto">
+    <div className="border-b border-surface-border py-2 px-5">
+      <div className="max-w-[900px] mx-auto">
         {/* Navigation row */}
-        <div className="flex items-center justify-center gap-2.5 flex-wrap">
+        <div className="flex items-center justify-center gap-2.5 flex-wrap font-sans">
           <button
             onClick={goPrev}
             disabled={!canPrev}
-            className="bg-white/[0.04] border border-surface-border-light rounded px-2.5 py-1 text-sm font-bold text-text-primary disabled:text-surface-border-light disabled:cursor-default cursor-pointer"
+            className="border-none bg-transparent px-2 py-1 text-sm text-text-dim disabled:text-text-quiet disabled:cursor-default cursor-pointer hover:text-text-primary"
             aria-label="Previous week"
           >
             ◀
           </button>
 
           <div className="text-center min-w-[260px]">
-            <div className="text-base font-extrabold text-text-primary font-serif">
+            <div className="text-xs font-semibold text-text-primary font-sans">
               {formatShort(currentSnapshot.week_start)} – {formatFull(currentSnapshot.week_end)}
             </div>
             <div className="flex gap-1.5 justify-center items-center mt-0.5">
-              <span className="text-[12px] text-text-dim">Week {weekNum}</span>
+              <span className="text-[10px] text-text-dim">Week {weekNum}</span>
               <StatusBadge status={currentSnapshot.status} />
             </div>
           </div>
@@ -92,7 +92,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
           <button
             onClick={goNext}
             disabled={!canNext}
-            className="bg-white/[0.04] border border-surface-border-light rounded px-2.5 py-1 text-sm font-bold text-text-primary disabled:text-surface-border-light disabled:cursor-default cursor-pointer"
+            className="border-none bg-transparent px-2 py-1 text-sm text-text-dim disabled:text-text-quiet disabled:cursor-default cursor-pointer hover:text-text-primary"
             aria-label="Next week"
           >
             ▶
@@ -100,7 +100,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
 
           <button
             onClick={() => setShowPicker(!showPicker)}
-            className="bg-white/[0.04] border border-surface-border-light rounded px-2 py-1 text-[15px] text-text-muted cursor-pointer"
+            className="border-none bg-transparent px-2 py-1 text-[15px] text-text-muted cursor-pointer hover:text-text-primary"
             aria-label="Open week picker"
           >
             📅
@@ -108,7 +108,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
         </div>
 
         {/* Quick-jump buttons */}
-        <div className="flex gap-1 justify-center mt-1.5 flex-wrap">
+        <div className="flex gap-1.5 justify-center mt-1.5 flex-wrap">
           {allWeeks.length > 0 && (
             <QuickButton
               label="This Week"
@@ -128,7 +128,6 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
               label="Inauguration"
               active={false}
               onClick={() => {
-                // Week of Jan 19, 2025 (inauguration day Jan 20)
                 const inaugWeek = allWeeks.find((w) => w.week_start === '2025-01-19');
                 if (inaugWeek) navigateTo(inaugWeek.week_id);
               }}
@@ -138,8 +137,8 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
 
         {/* Dropdown picker */}
         {showPicker && (
-          <div className="mt-2 bg-[#0f0f28] border border-surface-border-light rounded-md p-2 max-h-[200px] overflow-y-auto">
-            <div className="text-[12px] text-text-dim font-bold tracking-widest mb-1">
+          <div className="mt-2 bg-surface-raised border border-surface-border rounded p-2 max-h-[200px] overflow-y-auto">
+            <div className="text-[9px] text-text-dim font-sans font-semibold tracking-[2px] uppercase mb-1">
               ALL WEEKS
             </div>
             {allWeeks.map((w) => {
@@ -152,10 +151,10 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
                     navigateTo(w.week_id);
                     setShowPicker(false);
                   }}
-                  className={`px-2 py-1 rounded cursor-pointer text-[13px] mb-px flex justify-between ${
+                  className={`px-2 py-1 cursor-pointer text-[13px] font-sans mb-px flex justify-between ${
                     selected
-                      ? 'bg-mixed/[0.08] text-mixed font-bold'
-                      : 'text-text-secondary hover:bg-white/[0.03]'
+                      ? 'bg-surface-overlay text-text-primary font-bold'
+                      : 'text-text-secondary hover:bg-surface-overlay'
                   }`}
                 >
                   <span>
@@ -163,7 +162,7 @@ export function WeekSelector({ allWeeks, currentSnapshot }: WeekSelectorProps) {
                     {formatFull(w.week_end)}
                   </span>
                   {isLive && (
-                    <span className="text-live text-[11px] font-bold">LIVE</span>
+                    <span className="text-action text-[11px] font-bold">LIVE</span>
                   )}
                 </div>
               );
@@ -187,10 +186,10 @@ function QuickButton({
   return (
     <button
       onClick={onClick}
-      className={`px-2 py-0.5 rounded border text-[12px] font-semibold cursor-pointer ${
+      className={`px-2 py-0.5 text-[10px] font-sans cursor-pointer border-none bg-transparent ${
         active
-          ? 'bg-mixed/[0.08] border-mixed/25 text-mixed'
-          : 'bg-white/[0.04] border-surface-border-light text-text-muted hover:text-text-primary'
+          ? 'text-text-primary font-semibold'
+          : 'text-text-muted hover:text-text-primary'
       }`}
     >
       {label}

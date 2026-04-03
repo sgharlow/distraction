@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import sanitizeHtml from 'sanitize-html';
 import { getBlogPost, getAllBlogPosts } from '@/lib/data/blog';
 import { getWeekNumber } from '@/lib/weeks';
 import { TopNav } from '@/components/TopNav';
@@ -43,7 +44,14 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   if (!post) notFound();
 
   const weekNum = post.week_id ? getWeekNumber(new Date(post.week_id)) : null;
-  const html = markdownToHtml(post.body_markdown);
+  const html = sanitizeHtml(markdownToHtml(post.body_markdown), {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ['src', 'alt'],
+      a: ['href', 'class'],
+    },
+  });
 
   const jsonLd = {
     '@context': 'https://schema.org',

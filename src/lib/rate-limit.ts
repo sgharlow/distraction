@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 // In-memory fallback (per-process, resets on cold start)
 const memoryStore = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS = 30; // 30 requests per minute for public endpoints
+const MAX_REQUESTS = 5; // 5 requests per minute for public endpoints (subscribe/contact)
 
 function inMemoryLimit(identifier: string): { success: boolean; remaining: number } {
   const now = Date.now();

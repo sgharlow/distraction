@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
+  const rateLimited = await checkRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   try {
     const body = await request.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';

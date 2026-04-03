@@ -7,6 +7,8 @@ export async function signIn(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const next = (formData.get('next') as string) || '/admin';
+  // Prevent open redirect — only allow paths under /admin
+  const safeNext = next.startsWith('/admin') ? next : '/admin';
 
   if (!email || !password) {
     return { error: 'Email and password are required.' };
@@ -20,7 +22,7 @@ export async function signIn(formData: FormData) {
     return { error: error.message };
   }
 
-  redirect(next);
+  redirect(safeNext);
 }
 
 export async function signOut() {

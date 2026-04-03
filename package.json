@@ -51,9 +51,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
+    "@sentry/nextjs": "^10.47.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "@types/sanitize-html": "^2.16.1",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^1.6.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",

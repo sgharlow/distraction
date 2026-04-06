@@ -3,6 +3,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  trailingSlash: false,
   async headers() {
     return [
       {

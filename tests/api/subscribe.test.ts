@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock the rate limiter so it never blocks test requests
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: vi.fn(async () => null),
+}));
+
 // Mock the Supabase server client
 const mockInsert = vi.fn();
 const mockFrom = vi.fn(() => ({ insert: mockInsert }));

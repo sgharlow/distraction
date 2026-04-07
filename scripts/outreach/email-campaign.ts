@@ -102,10 +102,10 @@ function getFollowUpContacts(contacts: Contact[], sentLog: SentRecord[]): Contac
 
   return contacts.filter(c => {
     if (!c.email || c.status === 'BOUNCED') return false;
-    if (!c.status.startsWith('EMAILED')) return false;
 
-    // Check how many follow-ups already sent
+    // Check sent log (source of truth) — CSV status may not be updated
     const sentToThis = sentLog.filter(s => s.email === c.email);
+    if (sentToThis.length === 0) return false; // Never emailed
     const followUps = sentToThis.filter(s => s.type.startsWith('followup'));
 
     // Max 3 follow-ups

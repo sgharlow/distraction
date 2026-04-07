@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>2026-01-01T06:30:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+  </Triggers>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <ExecutionTimeLimit>PT10M</ExecutionTimeLimit>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+  </Settings>
+  <Actions>
+    <Exec>
+      <Command>cmd</Command>
+      <Arguments>/c cd /d C:\Users\sghar\CascadeProjects\distraction &amp;&amp; npx tsx scripts/outreach/scheduler.ts --post morning &gt;&gt; scripts\outreach\scheduler.log 2&gt;&amp;1</Arguments>
+    </Exec>
+  </Actions>
+</Task>

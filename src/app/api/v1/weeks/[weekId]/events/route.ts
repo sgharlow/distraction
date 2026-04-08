@@ -5,11 +5,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getWeekData } from '@/lib/data/weeks';
+import { checkApiRateLimit } from '@/lib/rate-limit';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ weekId: string }> }
 ) {
+  const rateLimited = await checkApiRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const { weekId } = await params;
   const weekData = await getWeekData(weekId);
 
@@ -26,26 +30,33 @@ export async function GET(
     ...weekData.events.C,
   ];
 
-  return NextResponse.json({
-    week_id: weekId,
-    status: weekData.snapshot.status,
-    total_events: allEvents.length,
-    events: {
-      A: weekData.events.A.map(eventSummary),
-      B: weekData.events.B.map(eventSummary),
-      C: weekData.events.C.map(eventSummary),
+  return NextResponse.json(
+    {
+      week_id: weekId,
+      status: weekData.snapshot.status,
+      total_events: allEvents.length,
+      events: {
+        A: weekData.events.A.map(eventSummary),
+        B: weekData.events.B.map(eventSummary),
+        C: weekData.events.C.map(eventSummary),
+      },
+      smokescreen_pairs: weekData.smokescreenPairs.map((p) => ({
+        id: p.id,
+        smokescreen_index: p.smokescreen_index,
+        displacement_confidence: p.displacement_confidence,
+        distraction_event_id: p.distraction_event_id,
+        distraction_title: p.distraction_event.title,
+        damage_event_id: p.damage_event_id,
+        damage_title: p.damage_event.title,
+        evidence_notes: p.evidence_notes,
+      })),
     },
-    smokescreen_pairs: weekData.smokescreenPairs.map((p) => ({
-      id: p.id,
-      smokescreen_index: p.smokescreen_index,
-      displacement_confidence: p.displacement_confidence,
-      distraction_event_id: p.distraction_event_id,
-      distraction_title: p.distraction_event.title,
-      damage_event_id: p.damage_event_id,
-      damage_title: p.damage_event.title,
-      evidence_notes: p.evidence_notes,
-    })),
-  });
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+      },
+    },
+  );
 }
 
 function eventSummary(e: {

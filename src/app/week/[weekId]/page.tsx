@@ -19,6 +19,10 @@ import { ShareButtons } from '@/components/ShareButtons';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { SupportCTA } from '@/components/SupportCTA';
 
+// ISR: serve cached page, regenerate in background every 60s.
+// Frozen weeks return identical content; live week stays near-realtime.
+export const revalidate = 60;
+
 interface WeekPageProps {
   params: Promise<{ weekId: string }>;
 }

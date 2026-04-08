@@ -9,19 +9,20 @@ import { NextResponse } from 'next/server';
 const memoryStore = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000; // 1 minute
 const MAX_REQUESTS = 5; // 5 requests per minute for public endpoints (subscribe/contact)
+const MAX_REQUESTS_API = 60; // 60 requests per minute for public read-only API
 
-function inMemoryLimit(identifier: string): { success: boolean; remaining: number } {
+function inMemoryLimit(identifier: string, max: number = MAX_REQUESTS): { success: boolean; remaining: number } {
   const now = Date.now();
   const entry = memoryStore.get(identifier);
 
   if (!entry || now > entry.resetAt) {
     memoryStore.set(identifier, { count: 1, resetAt: now + WINDOW_MS });
-    return { success: true, remaining: MAX_REQUESTS - 1 };
+    return { success: true, remaining: max - 1 };
   }
 
   entry.count++;
-  const remaining = Math.max(0, MAX_REQUESTS - entry.count);
-  return { success: entry.count <= MAX_REQUESTS, remaining };
+  const remaining = Math.max(0, max - entry.count);
+  return { success: entry.count <= max, remaining };
 }
 
 let rateLimiter: {
@@ -80,6 +81,35 @@ export async function checkRateLimit(
   const ip = forwarded?.split(',')[0]?.trim() || 'anonymous';
 
   const { success, remaining } = await limiter.limit(ip);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Remaining': String(remaining),
+        },
+      },
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Rate limit for public read-only API routes (higher threshold).
+ * 60 requests per minute per IP.
+ */
+export async function checkApiRateLimit(
+  request: Request,
+): Promise<NextResponse | null> {
+  const forwarded = request?.headers?.get?.('x-forwarded-for') ?? null;
+  const ip = forwarded?.split(',')[0]?.trim() || 'anonymous';
+  const key = `api:${ip}`;
+
+  const { success, remaining } = inMemoryLimit(key, MAX_REQUESTS_API);
 
   if (!success) {
     return NextResponse.json(

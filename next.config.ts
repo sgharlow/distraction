@@ -28,6 +28,35 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // CDN caching for public API routes
+      {
+        source: "/api/v1/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=300, stale-while-revalidate=3600",
+          },
+        ],
+      },
+      // Static informational pages (methodology, about, etc.)
+      {
+        source: "/methodology",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=86400, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/about",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=86400, stale-while-revalidate=86400",
+          },
+        ],
+      },
     ];
   },
 };

@@ -6,6 +6,9 @@ import { MechanismBadge } from '@/components/MechanismBadge';
 import { getEventsByTopic } from '@/lib/data/topics';
 import { parseWeekId, getWeekNumber, getWeekLabelShort } from '@/lib/weeks';
 
+// ISR: cache topic pages for 5 minutes.
+export const revalidate = 300;
+
 interface TopicPageProps {
   params: Promise<{ tag: string }>;
 }

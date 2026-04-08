@@ -22,6 +22,9 @@ import {
   B_LAYER2_LABELS,
 } from '@/lib/types';
 
+// ISR: cache event pages for 5 minutes. Events rarely change after scoring.
+export const revalidate = 300;
+
 interface EventPageProps {
   params: Promise<{ eventId: string }>;
 }

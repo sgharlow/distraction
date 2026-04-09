@@ -117,8 +117,8 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         </div>
 
         <p className="text-[13.5px] text-text-muted mb-4 leading-relaxed">
-          These are events where constitutional damage (A-score) far exceeds
-          the media attention they receive (B-score). An Attention Budget below
+          These are events where constitutional damage (Damage score) far exceeds
+          the media attention they receive (Hype score). An Attention Budget below
           −15 means the event is getting less coverage than its real-world
           impact warrants — the public should know more about these.
         </p>
@@ -168,7 +168,7 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         {otherListA.length > 0 && (
           <div className="space-y-1.5">
             <div className="text-[9px] font-sans font-semibold uppercase tracking-[2px] text-text-dim mb-1">
-              All List A Events ({otherListA.length})
+              All Damage Events ({otherListA.length})
             </div>
             {otherListA.map((event) => (
               <Link
@@ -204,7 +204,7 @@ export default async function UndercoveredPage({ searchParams }: UndercoveredPag
         {undercovered.length === 0 && otherListA.length === 0 && (
           <div className="bg-surface-raised border border-surface-border rounded-[6px] p-5 text-center">
             <div className="text-[9px] font-sans font-semibold uppercase tracking-[2px] text-text-muted mb-1.5">
-              No List A Events
+              No Damage Events
             </div>
             <p className="text-[13.5px] text-text-dim leading-relaxed m-0 mb-2">
               No high-damage events have been scored this week yet.

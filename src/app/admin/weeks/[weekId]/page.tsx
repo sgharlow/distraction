@@ -108,11 +108,11 @@ export default function AdminWeekEditorPage() {
       {/* Stats */}
       <div className="grid grid-cols-6 gap-3 mb-6">
         <MiniStat label="Total" value={week.total_events} />
-        <MiniStat label="List A" value={week.list_a_count} color="text-damage" />
-        <MiniStat label="List B" value={week.list_b_count} color="text-distraction" />
-        <MiniStat label="List C" value={week.list_c_count} color="text-noise" />
-        <MiniStat label="Avg A" value={week.avg_a_score != null ? Math.round(week.avg_a_score) : 0} color="text-damage" />
-        <MiniStat label="Avg B" value={week.avg_b_score != null ? Math.round(week.avg_b_score) : 0} color="text-distraction" />
+        <MiniStat label="Damage" value={week.list_a_count} color="text-damage" />
+        <MiniStat label="Hype" value={week.list_b_count} color="text-distraction" />
+        <MiniStat label="Noise" value={week.list_c_count} color="text-noise" />
+        <MiniStat label="Avg Dmg" value={week.avg_a_score != null ? Math.round(week.avg_a_score) : 0} color="text-damage" />
+        <MiniStat label="Avg Hype" value={week.avg_b_score != null ? Math.round(week.avg_b_score) : 0} color="text-distraction" />
       </div>
 
       {/* Edit section */}
@@ -204,9 +204,9 @@ export default function AdminWeekEditorPage() {
 
       {/* Event breakdown */}
       <div className="grid grid-cols-3 gap-4">
-        <EventColumn title="List A — Damage" events={listA} color="text-damage" />
-        <EventColumn title="List B — Distraction" events={listB} color="text-distraction" />
-        <EventColumn title="List C / Noise" events={listC} color="text-noise" />
+        <EventColumn title="Damage" events={listA} color="text-damage" />
+        <EventColumn title="Hype" events={listB} color="text-distraction" />
+        <EventColumn title="Noise" events={listC} color="text-noise" />
       </div>
     </div>
   );
@@ -234,7 +234,7 @@ function EventColumn({ title, events, color }: { title: string; events: { id: st
           >
             <span className="line-clamp-2">{e.title}</span>
             <span className="text-text-dim mt-0.5 block">
-              A:{e.a_score != null ? Math.round(e.a_score) : '—'} B:{e.b_score != null ? Math.round(e.b_score) : '—'}
+              Dmg:{e.a_score != null ? Math.round(e.a_score) : '—'} Hype:{e.b_score != null ? Math.round(e.b_score) : '—'}
               {e.is_mixed && ' MIXED'}
             </span>
           </Link>

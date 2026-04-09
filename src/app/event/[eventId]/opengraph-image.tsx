@@ -20,7 +20,7 @@ export default async function Image({ params }: { params: Promise<{ eventId: str
   }
 
   const list = event.primary_list;
-  const listLabel = list === 'A' ? 'REAL DAMAGE' : list === 'B' ? 'DISTRACTION' : 'NOISE';
+  const listLabel = list === 'A' ? 'DAMAGE' : list === 'B' ? 'HYPE' : 'NOISE';
   const listColor = list === 'A' ? '#DC2626' : list === 'B' ? '#D97706' : '#6B7280';
 
   const summary = event.summary
@@ -76,7 +76,7 @@ export default async function Image({ params }: { params: Promise<{ eventId: str
       <div style={{ display: 'flex', gap: 48, marginTop: 'auto', marginBottom: 24 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', letterSpacing: '0.15em', marginBottom: 4 }}>
-            A-SCORE
+            DAMAGE
           </div>
           <div style={{ fontSize: 56, fontWeight: 800, color: '#DC2626' }}>
             {event.a_score?.toFixed(1) ?? '—'}
@@ -84,7 +84,7 @@ export default async function Image({ params }: { params: Promise<{ eventId: str
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#D97706', letterSpacing: '0.15em', marginBottom: 4 }}>
-            B-SCORE
+            HYPE
           </div>
           <div style={{ fontSize: 56, fontWeight: 800, color: '#D97706' }}>
             {event.b_score?.toFixed(1) ?? '—'}

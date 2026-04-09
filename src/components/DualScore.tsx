@@ -23,13 +23,13 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
       <div
         className={cn(
           'text-center border rounded-[3px]',
-          lg ? 'px-3 py-1.5 min-w-[68px]' : 'px-1.5 py-0.5 min-w-[40px]',
+          lg ? 'px-3 py-1.5 min-w-[68px]' : 'px-1.5 py-0.5 min-w-[50px]',
           aHighlight
             ? 'bg-damage-light border-damage'
             : 'bg-surface-overlay border-surface-border'
         )}
       >
-        <div className="font-sans text-[10px] text-text-dim">A</div>
+        <div className="font-sans text-[10px] text-text-dim">Damage</div>
         <div
           className={cn(
             'font-sans',
@@ -55,13 +55,13 @@ export function DualScore({ aScore, bScore, size = 'sm', showLabels = false, sho
       <div
         className={cn(
           'text-center border rounded-[3px]',
-          lg ? 'px-3 py-1.5 min-w-[68px]' : 'px-1.5 py-0.5 min-w-[40px]',
+          lg ? 'px-3 py-1.5 min-w-[68px]' : 'px-1.5 py-0.5 min-w-[50px]',
           bHighlight
             ? 'bg-distraction-light border-distraction'
             : 'bg-surface-overlay border-surface-border'
         )}
       >
-        <div className="font-sans text-[10px] text-text-dim">B</div>
+        <div className="font-sans text-[10px] text-text-dim">Hype</div>
         <div
           className={cn(
             'font-sans',

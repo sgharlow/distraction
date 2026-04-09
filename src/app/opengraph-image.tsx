@@ -39,13 +39,13 @@ export default function Image() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#DC2626' }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: '#DC2626', letterSpacing: '0.1em' }}>
-            A-SCORE: CONSTITUTIONAL DAMAGE
+            DAMAGE: CONSTITUTIONAL DAMAGE
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#D97706' }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: '#D97706', letterSpacing: '0.1em' }}>
-            B-SCORE: DISTRACTION / HYPE
+            HYPE: DISTRACTION / HYPE
           </div>
         </div>
       </div>

@@ -146,7 +146,7 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
                       className="flex-1 bg-distraction/[0.03] border border-distraction/[0.06] rounded-[6px] p-2 no-underline hover:border-distraction/15 transition-colors"
                     >
                       <div className="text-[9px] font-sans font-semibold tracking-[2px] text-distraction mb-0.5">
-                        DISTRACTION
+                        HYPE
                       </div>
                       <div className="text-[13.5px] text-text-primary font-semibold leading-tight">
                         {pair.distraction_event.title}
@@ -167,7 +167,7 @@ export default async function SmokescreenPage({ searchParams }: SmokescreenPageP
                       className="flex-1 bg-damage/[0.03] border border-damage/[0.06] rounded-[6px] p-2 no-underline hover:border-damage/15 transition-colors"
                     >
                       <div className="text-[9px] font-sans font-semibold tracking-[2px] text-damage mb-0.5">
-                        REAL DAMAGE
+                        DAMAGE
                       </div>
                       <div className="text-[13.5px] text-text-primary font-semibold leading-tight">
                         {pair.damage_event.title}

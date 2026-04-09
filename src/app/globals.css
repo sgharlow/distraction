@@ -37,6 +37,10 @@
   --font-mono: Helvetica, Arial, sans-serif;
 }
 
+html {
+  font-size: 17px;
+}
+
 body {
   background-color: var(--color-surface-base);
   color: var(--color-text-primary);
@@ -66,14 +70,14 @@ body {
 /* Editorial prose styling for blog posts and content pages */
 .prose-editorial {
   font-family: var(--font-serif);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
 .prose-editorial h2 {
   font-family: var(--font-serif);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 24px 0 8px;
@@ -81,7 +85,7 @@ body {
 
 .prose-editorial h3 {
   font-family: var(--font-serif);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 20px 0 6px;

@@ -106,8 +106,8 @@ export default async function AdminDashboard() {
           </span>
         </div>
         <div className="grid grid-cols-5 gap-3 text-sm">
-          <MiniStat label="List A" value={data.listCounts.A} color="text-damage" />
-          <MiniStat label="List B" value={data.listCounts.B} color="text-distraction" />
+          <MiniStat label="Damage" value={data.listCounts.A} color="text-damage" />
+          <MiniStat label="Hype" value={data.listCounts.B} color="text-distraction" />
           <MiniStat label="List C" value={data.listCounts.C} color="text-noise" />
           <MiniStat
             label="Low Confidence"

@@ -42,9 +42,9 @@ export default function MethodologyPage() {
         </section>
 
         <div className="space-y-2.5">
-          {/* List A */}
+          {/* Damage */}
           <section className="bg-damage-light border border-surface-border rounded-[6px] p-3">
-            <h2 className="font-serif text-sm font-bold text-damage mb-1">List A — Constitutional Damage</h2>
+            <h2 className="font-serif text-sm font-bold text-damage mb-1">Damage — Constitutional Damage Score</h2>
             <p className="text-[13px] text-text-secondary leading-relaxed mb-3">
               7 weighted drivers scored 0–5, combined with severity multipliers, mechanism modifier,
               and scope modifier.
@@ -87,9 +87,9 @@ export default function MethodologyPage() {
             </div>
           </section>
 
-          {/* List B */}
+          {/* Hype */}
           <section className="bg-distraction-light border border-surface-border rounded-[6px] p-3">
-            <h2 className="font-serif text-sm font-bold text-distraction mb-1">List B — Distraction/Hype</h2>
+            <h2 className="font-serif text-sm font-bold text-distraction mb-1">Hype — Distraction/Hype Score</h2>
             <p className="text-[13px] text-text-secondary leading-relaxed mb-3">
               Layer 1 measures raw hype (55% weight). Layer 2 measures strategic manipulation
               (45% weight, modulated by intentionality evidence 0–15).
@@ -112,9 +112,9 @@ export default function MethodologyPage() {
           <section className="bg-surface-overlay border border-surface-border rounded-[6px] p-3">
             <h2 className="font-serif text-sm font-bold text-mixed mb-1">Classification & Dominance Margin</h2>
             <p className="text-[13px] text-text-secondary leading-relaxed">
-              Events are assigned to List A (damage), List B (distraction), or List C (noise)
-              based on dominance margin (A − B). A ±10 threshold prevents bucket thrash.
-              Events with both high A and high B scores receive a <strong className="text-text-primary">MIXED</strong> badge.
+              Events are assigned to the Damage list, Hype list, or Noise list
+              based on dominance margin (Damage − Hype). A ±10 threshold prevents bucket thrash.
+              Events with both high Damage and high Hype scores receive a <strong className="text-text-primary">MIXED</strong> badge.
               List C catches low-salience events (A &lt; 25 AND B &lt; 25) and those
               failing the noise gate (A &lt; 25, no institutional mechanism).
             </p>

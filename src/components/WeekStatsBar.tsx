@@ -23,13 +23,13 @@ export function WeekStatsBar({ snapshot, priorSnapshot }: WeekStatsBarProps) {
       delta: prior ? fmtDelta(snapshot.total_events, prior.total_events) : undefined,
     },
     {
-      label: 'List A',
+      label: 'Damage',
       value: snapshot.list_a_count,
       color: 'text-damage',
       delta: prior ? fmtDelta(snapshot.list_a_count, prior.list_a_count) : undefined,
     },
     {
-      label: 'List B',
+      label: 'Hype',
       value: snapshot.list_b_count,
       color: 'text-distraction',
       delta: prior ? fmtDelta(snapshot.list_b_count, prior.list_b_count) : undefined,
@@ -41,13 +41,13 @@ export function WeekStatsBar({ snapshot, priorSnapshot }: WeekStatsBarProps) {
       delta: prior ? fmtDelta(snapshot.list_c_count, prior.list_c_count) : undefined,
     },
     {
-      label: 'Avg A',
+      label: 'Avg Dmg',
       value: fmtScore(snapshot.avg_a_score),
       color: 'text-damage',
       delta: prior ? fmtDelta(snapshot.avg_a_score, prior.avg_a_score, 1) : undefined,
     },
     {
-      label: 'Avg B',
+      label: 'Avg Hype',
       value: fmtScore(snapshot.avg_b_score),
       color: 'text-distraction',
       delta: prior ? fmtDelta(snapshot.avg_b_score, prior.avg_b_score, 1) : undefined,

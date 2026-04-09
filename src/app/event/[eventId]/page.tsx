@@ -34,8 +34,8 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   const event = await getEventDetail(eventId);
   if (!event) return { title: 'Event Not Found' };
 
-  const list = event.primary_list === 'A' ? 'Damage' : event.primary_list === 'B' ? 'Distraction' : 'Noise';
-  const description = `${list} event — A: ${event.a_score?.toFixed(1) ?? '—'} / B: ${event.b_score?.toFixed(1) ?? '—'}. ${event.summary?.slice(0, 150) ?? ''}`;
+  const list = event.primary_list === 'A' ? 'Damage' : event.primary_list === 'B' ? 'Hype' : 'Noise';
+  const description = `${list} event — Dmg: ${event.a_score?.toFixed(1) ?? '—'} / Hype: ${event.b_score?.toFixed(1) ?? '—'}. ${event.summary?.slice(0, 150) ?? ''}`;
 
   return {
     title: event.title,
@@ -68,7 +68,7 @@ export default async function EventPage({ params }: EventPageProps) {
   const list = event.primary_list;
   const isNoise = list === 'C';
   const color = list === 'A' ? 'damage' : list === 'B' ? 'distraction' : 'noise';
-  const listLabel = list === 'A' ? 'Real Damage' : list === 'B' ? 'Distraction' : 'Noise';
+  const listLabel = list === 'A' ? 'Damage' : list === 'B' ? 'Hype' : 'Noise';
 
   const articleSection = list === 'A' ? 'Democratic Damage' : list === 'B' ? 'Manufactured Distraction' : 'Noise';
   const jsonLd = {
@@ -168,7 +168,7 @@ export default async function EventPage({ params }: EventPageProps) {
             <ShareButtons
               url={`/event/${event.id}`}
               title={event.title}
-              description={`${listLabel} — A: ${event.a_score?.toFixed(1) ?? '—'} / B: ${event.b_score?.toFixed(1) ?? '—'}`}
+              description={`${listLabel} — Dmg: ${event.a_score?.toFixed(1) ?? '—'} / Hype: ${event.b_score?.toFixed(1) ?? '—'}`}
             />
           </div>
         </div>
@@ -204,10 +204,10 @@ export default async function EventPage({ params }: EventPageProps) {
           </section>
         )}
 
-        {/* A-Score driver breakdown */}
+        {/* Damage score driver breakdown */}
         {event.a_components && (
           <section className="bg-damage-light border border-surface-border rounded-[6px] p-3 mb-2">
-            <SectionLabel className="text-damage">A-Score Drivers</SectionLabel>
+            <SectionLabel className="text-damage">Damage Score Drivers</SectionLabel>
             {A_DRIVER_KEYS.map((key) => (
               <ScoreBar
                 key={key}
@@ -229,10 +229,10 @@ export default async function EventPage({ params }: EventPageProps) {
           </section>
         )}
 
-        {/* B-Score layer breakdown */}
+        {/* Hype score layer breakdown */}
         {event.b_layer1_hype && (
           <section className="bg-distraction-light border border-surface-border rounded-[6px] p-3 mb-2">
-            <SectionLabel className="text-distraction">B-Score: Layer 1 — Hype (55%)</SectionLabel>
+            <SectionLabel className="text-distraction">Hype Score: Layer 1 — Hype (55%)</SectionLabel>
             {B_LAYER1_KEYS.map((key) => (
               <ScoreBar
                 key={key}
@@ -328,7 +328,7 @@ export default async function EventPage({ params }: EventPageProps) {
             {event.score_history.map((change) => (
               <div key={change.id} className="font-sans text-[11px] text-text-dim">
                 v{change.version_after} {new Date(change.changed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}:{' '}
-                A={change.new_a_score?.toFixed(1) ?? '—'} B={change.new_b_score?.toFixed(1) ?? '—'}{' '}
+                Dmg={change.new_a_score?.toFixed(1) ?? '—'} Hype={change.new_b_score?.toFixed(1) ?? '—'}{' '}
                 ({change.changed_by}){change.reason ? ` — ${change.reason}` : ''}
               </div>
             ))}

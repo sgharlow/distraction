@@ -270,10 +270,10 @@ export default function AdminEventEditorPage() {
             <h3 className="text-xs font-semibold text-text-dim mb-3 uppercase tracking-wide">Scores</h3>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="A-Score">
+              <Field label="Damage Score">
                 <input type="number" min="0" max="100" value={aScore} onChange={(e) => setAScore(e.target.value)} className="input-field text-damage" />
               </Field>
-              <Field label="B-Score">
+              <Field label="Hype Score">
                 <input type="number" min="0" max="100" value={bScore} onChange={(e) => setBScore(e.target.value)} className="input-field text-distraction" />
               </Field>
             </div>

@@ -13,7 +13,7 @@ export function AttentionBudget({ aScore, bScore }: AttentionBudgetProps) {
 
   if (ab > 30) {
     color = 'text-distraction';
-    label = 'DISTRACTION';
+    label = 'HYPE';
   } else if (ab < -30) {
     color = 'text-damage';
     label = 'UNDERCOVERED';

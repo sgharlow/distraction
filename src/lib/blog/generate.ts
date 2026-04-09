@@ -7,7 +7,7 @@ export interface GeneratedBlogPost {
   keywords: string[];
 }
 
-const SYSTEM_PROMPT = `You are a civic intelligence analyst writing for The Distraction Index — a weekly report that scores U.S. political events on two axes: constitutional damage (A-score) and distraction/hype (B-score).
+const SYSTEM_PROMPT = `You are a civic intelligence analyst writing for The Distraction Index — a weekly report that scores U.S. political events on two axes: constitutional damage (Damage score) and distraction/hype (Hype score).
 
 Write an engaging, factual blog post analyzing this week's data. Your audience is politically engaged citizens who want to understand what's actually happening vs. what's dominating headlines.
 
@@ -41,8 +41,8 @@ export async function generateBlogPost(weekData: {
 
 Data summary:
 - ${weekData.totalEvents} events scored
-- ${weekData.listA.length} high-damage events (List A)
-- ${weekData.listB.length} high-distraction events (List B)
+- ${weekData.listA.length} high-damage events (Damage list)
+- ${weekData.listB.length} high-hype events (Hype list)
 - ${weekData.smokescreenCount} smokescreen pairs detected
 - Average damage: ${weekData.avgDamage.toFixed(1)}/100
 - Average distraction: ${weekData.avgDistraction.toFixed(1)}/100

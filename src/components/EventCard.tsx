@@ -23,7 +23,7 @@ export function EventCard({ event, list, rank }: EventCardProps) {
   let tagLabel: string | null = null;
   let tagClasses = '';
   if (ab > 30) {
-    tagLabel = 'DISTRACTION';
+    tagLabel = 'HYPE';
     tagClasses = 'bg-distraction-light text-distraction';
   } else if (ab < -30) {
     tagLabel = 'UNDERCOVERED';

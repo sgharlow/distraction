@@ -31,10 +31,10 @@ export default function AdminWeeksPage() {
               <th className="px-3 py-2 text-left">Date Range</th>
               <th className="px-3 py-2 text-center">Status</th>
               <th className="px-3 py-2 text-right">Events</th>
-              <th className="px-3 py-2 text-right">Avg A</th>
-              <th className="px-3 py-2 text-right">Avg B</th>
-              <th className="px-3 py-2 text-right">List A</th>
-              <th className="px-3 py-2 text-right">List B</th>
+              <th className="px-3 py-2 text-right">Avg Dmg</th>
+              <th className="px-3 py-2 text-right">Avg Hype</th>
+              <th className="px-3 py-2 text-right">Damage</th>
+              <th className="px-3 py-2 text-right">Hype</th>
               <th className="px-3 py-2 text-right">List C</th>
             </tr>
           </thead>

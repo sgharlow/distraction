@@ -68,7 +68,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
         <div className="flex gap-1 mb-4">
           <FilterChip href="/timeline" label="All" active={!listFilter} />
           <FilterChip href="/timeline?list=A" label="Damage" active={listFilter === 'A'} color="damage" />
-          <FilterChip href="/timeline?list=B" label="Distraction" active={listFilter === 'B'} color="distraction" />
+          <FilterChip href="/timeline?list=B" label="Hype" active={listFilter === 'B'} color="distraction" />
           <FilterChip href="/timeline?list=C" label="Noise" active={listFilter === 'C'} color="noise" />
         </div>
 
@@ -114,7 +114,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
                                 <span className={`text-[10px] font-sans font-semibold tracking-[2px] text-${color}`}>
-                                  {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
+                                  {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'HYPE' : 'NOISE'}
                                 </span>
                                 <span className="text-[11px] text-text-dim">
                                   {event.event_date}

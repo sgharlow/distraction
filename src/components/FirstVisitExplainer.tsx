@@ -33,11 +33,11 @@ export function FirstVisitExplainer() {
               What is the Distraction Index?
             </div>
             <p className="font-serif text-[13px] text-text-secondary leading-relaxed m-0">
-              Every event gets two scores: <strong className="text-damage">A-score</strong> measures
+              Every event gets two scores: <strong className="text-damage">Damage</strong> measures
               real constitutional damage (institutional erosion, rule-of-law threats),
-              while <strong className="text-distraction">B-score</strong> measures manufactured media
-              hype and distraction potential. Events land on <strong className="text-damage">List A</strong> (real
-              damage), <strong className="text-distraction">List B</strong> (distractions),
+              while <strong className="text-distraction">Hype</strong> measures manufactured media
+              hype and distraction potential. Events land on the <strong className="text-damage">Damage</strong> list,
+              the <strong className="text-distraction">Hype</strong> list,
               or <strong className="text-noise">Noise</strong> based on which score dominates.
               {' '}
               <Link href="/methodology" className="text-text-primary underline hover:text-damage">

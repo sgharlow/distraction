@@ -10,13 +10,13 @@ interface ListColumnProps {
 
 const listConfig = {
   A: {
-    label: 'Real Damage',
+    label: 'Damage',
     tag: 'Constitutional Threats',
     colorText: 'text-damage',
     borderColor: 'border-damage',
   },
   B: {
-    label: 'Distractions',
+    label: 'Hype',
     tag: 'Manufactured Outrage',
     colorText: 'text-distraction',
     borderColor: 'border-distraction',

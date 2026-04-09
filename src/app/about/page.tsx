@@ -57,8 +57,8 @@ export default function AboutPage() {
           <h2 className="font-serif text-base font-bold text-text-primary mb-2">Mission</h2>
           <p className="text-[13px] text-text-secondary leading-relaxed mb-3">
             The Distraction Index publishes a weekly, frozen record of U.S. political events
-            scored on two dimensions: constitutional damage (A-score) and media hype /
-            manufactured distraction (B-score). The goal is to help citizens distinguish
+            scored on two dimensions: constitutional damage (Damage score) and media hype /
+            manufactured distraction (Hype score). The goal is to help citizens distinguish
             between events that cause real democratic harm and events that are engineered
             to dominate attention.
           </p>
@@ -99,7 +99,7 @@ export default function AboutPage() {
             </div>
             <ul className="text-[13px] text-text-secondary space-y-1 m-0 pl-4">
               <li>Claude Haiku 4.5 &mdash; article clustering and event identification</li>
-              <li>Claude Sonnet 4.5 &mdash; dual-axis scoring (A-score and B-score)</li>
+              <li>Claude Sonnet 4.5 &mdash; dual-axis scoring (Damage and Hype)</li>
             </ul>
           </div>
         </section>

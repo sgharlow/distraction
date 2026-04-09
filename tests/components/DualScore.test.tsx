@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react';
 import { DualScore } from '@/components/DualScore';
 
 describe('DualScore', () => {
-  it('renders A and B labels', () => {
+  it('renders Damage and Hype labels', () => {
     render(<DualScore aScore={50} bScore={30} />);
-    expect(screen.getByText('A')).toBeInTheDocument();
-    expect(screen.getByText('B')).toBeInTheDocument();
+    expect(screen.getByText('Damage')).toBeInTheDocument();
+    expect(screen.getByText('Hype')).toBeInTheDocument();
   });
 
   it('renders formatted score values', () => {

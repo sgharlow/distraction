@@ -84,10 +84,10 @@ export default async function TopicPage({ params }: TopicPageProps) {
         {events.length > 0 && (
           <div className="flex gap-3 mb-4 flex-wrap">
             <StatChip label="Damage" value={listA} color="damage" />
-            <StatChip label="Distraction" value={listB} color="distraction" />
+            <StatChip label="Hype" value={listB} color="distraction" />
             <StatChip label="Noise" value={listC} color="noise" />
-            <StatChip label="Avg A" value={avgA.toFixed(1)} />
-            <StatChip label="Avg B" value={avgB.toFixed(1)} />
+            <StatChip label="Avg Dmg" value={avgA.toFixed(1)} />
+            <StatChip label="Avg Hype" value={avgB.toFixed(1)} />
           </div>
         )}
 
@@ -126,7 +126,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
                                 <span className={`text-[10px] font-sans font-semibold tracking-[2px] text-${color}`}>
-                                  {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'DIST' : 'NOISE'}
+                                  {event.primary_list === 'A' ? 'DMG' : event.primary_list === 'B' ? 'HYPE' : 'NOISE'}
                                 </span>
                                 <span className="text-[11px] text-text-dim">{event.event_date}</span>
                               </div>

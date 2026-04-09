@@ -113,9 +113,9 @@ export default function AdminEventsPage() {
           className="bg-surface-base border border-surface-border rounded px-3 py-1.5 text-sm text-text-primary"
         >
           <option value="">All Lists</option>
-          <option value="A">List A</option>
-          <option value="B">List B</option>
-          <option value="C">List C</option>
+          <option value="A">Damage</option>
+          <option value="B">Hype</option>
+          <option value="C">Noise</option>
         </select>
         <select
           value={reviewedFilter}

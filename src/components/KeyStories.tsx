@@ -41,7 +41,7 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
           {topDamage && (
             <Link href={`/event/${topDamage.id}`} className="no-underline block">
               <div className="font-sans text-[8px] font-semibold tracking-[2.5px] uppercase text-damage mb-1.5">
-                Top Damage · A: {topDamage.a_score?.toFixed(1)}
+                Top Damage · Dmg: {topDamage.a_score?.toFixed(1)}
               </div>
               <div className="font-serif text-base font-bold leading-[1.25] text-text-primary mb-1">
                 {topDamage.title}
@@ -52,8 +52,8 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
                 </p>
               )}
               <div className="flex gap-1.5 items-center">
-                <ScoreDisplay label="A" score={topDamage.a_score} threshold={50} colorClass="text-damage" />
-                <ScoreDisplay label="B" score={topDamage.b_score} threshold={50} colorClass="text-distraction" />
+                <ScoreDisplay label="Dmg" score={topDamage.a_score} threshold={50} colorClass="text-damage" />
+                <ScoreDisplay label="Hype" score={topDamage.b_score} threshold={50} colorClass="text-distraction" />
                 <span className="font-sans text-[9px] text-text-muted">
                   {topDamage.article_count} {topDamage.article_count === 1 ? 'src' : 'srcs'}
                 </span>
@@ -65,7 +65,7 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
           {topDistraction && (
             <Link href={`/event/${topDistraction.id}`} className="no-underline block">
               <div className="font-sans text-[8px] font-semibold tracking-[2.5px] uppercase text-distraction mb-1.5">
-                Top Distraction · B: {topDistraction.b_score?.toFixed(1)}
+                Top Hype · Hype: {topDistraction.b_score?.toFixed(1)}
               </div>
               <div className="font-serif text-base font-bold leading-[1.25] text-text-primary mb-1">
                 {topDistraction.title}
@@ -76,8 +76,8 @@ export function KeyStories({ topDamage, topDistraction, topSmokescreenPair }: Ke
                 </p>
               )}
               <div className="flex gap-1.5 items-center">
-                <ScoreDisplay label="A" score={topDistraction.a_score} threshold={50} colorClass="text-damage" />
-                <ScoreDisplay label="B" score={topDistraction.b_score} threshold={50} colorClass="text-distraction" />
+                <ScoreDisplay label="Dmg" score={topDistraction.a_score} threshold={50} colorClass="text-damage" />
+                <ScoreDisplay label="Hype" score={topDistraction.b_score} threshold={50} colorClass="text-distraction" />
                 <span className="font-sans text-[9px] text-text-muted">
                   {topDistraction.article_count} {topDistraction.article_count === 1 ? 'src' : 'srcs'}
                 </span>

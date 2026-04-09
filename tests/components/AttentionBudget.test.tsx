@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react';
 import { AttentionBudget } from '@/components/AttentionBudget';
 
 describe('AttentionBudget', () => {
-  it('shows DISTRACTION label when B - A > 30', () => {
+  it('shows HYPE label when B - A > 30', () => {
     render(<AttentionBudget aScore={20} bScore={55} />);
-    expect(screen.getByText(/DISTRACTION/)).toBeInTheDocument();
+    expect(screen.getByText(/HYPE/)).toBeInTheDocument();
   });
 
   it('shows UNDERCOVERED label when B - A < -30', () => {

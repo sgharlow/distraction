@@ -50,12 +50,12 @@ async function generateBlogPost(weekId: string): Promise<{ slug: string } | null
   const avgDistraction = allEvents.reduce((s, e) => s + (e.b_score || 0), 0) / allEvents.length;
   const weekNum = getWeekNumber(new Date(weekId));
 
-  const system = `You are a civic intelligence analyst writing for The Distraction Index — a weekly report that scores U.S. political events on two axes: constitutional damage (A-score) and distraction/hype (B-score). Write an engaging, well-structured blog post analyzing this week's data with specific insights about which events matter and why. Include analysis of the smokescreen dynamic (high-distraction events obscuring high-damage ones). End with a call to subscribe. Respond with JSON only: {"title":"headline","meta_description":"150 chars","body_markdown":"1000-1500 word article","keywords":["5-8 terms"]}`;
+  const system = `You are a civic intelligence analyst writing for The Distraction Index — a weekly report that scores U.S. political events on two axes: constitutional damage (Damage score) and distraction/hype (Hype score). Write an engaging, well-structured blog post analyzing this week's data with specific insights about which events matter and why. Include analysis of the smokescreen dynamic (high-hype events obscuring high-damage ones). End with a call to subscribe. Respond with JSON only: {"title":"headline","meta_description":"150 chars","body_markdown":"1000-1500 word article","keywords":["5-8 terms"]}`;
 
   const listATop3 = listA.slice(0, 3).map(e => `"${e.title}" (A:${e.a_score?.toFixed(1)})`).join(', ');
   const listBTop3 = listB.slice(0, 3).map(e => `"${e.title}" (B:${e.b_score?.toFixed(1)})`).join(', ');
 
-  const user = `Week ${weekNum} (${weekId}): ${allEvents.length} events scored. Top constitutional damage: ${listATop3}. Top distraction: ${listBTop3}. ${pairs?.length ?? 0} smokescreen pairs. Avg damage: ${avgDamage.toFixed(1)}. Avg distraction: ${avgDistraction.toFixed(1)}. List A (high damage): ${listA.length} events. List B (high distraction): ${listB.length} events. Full report: https://distractionindex.org/week/${weekId}. Subscribe: https://distractionindex.substack.com`;
+  const user = `Week ${weekNum} (${weekId}): ${allEvents.length} events scored. Top constitutional damage: ${listATop3}. Top distraction: ${listBTop3}. ${pairs?.length ?? 0} smokescreen pairs. Avg damage: ${avgDamage.toFixed(1)}. Avg distraction: ${avgDistraction.toFixed(1)}. Damage list (high damage): ${listA.length} events. Hype list (high hype): ${listB.length} events. Full report: https://distractionindex.org/week/${weekId}. Subscribe: https://distractionindex.substack.com`;
 
   const response = await callSonnet(system, user, 3000);
   const parsed = extractJSON<{ title: string; meta_description: string; body_markdown: string; keywords: string[] }>(response.text);

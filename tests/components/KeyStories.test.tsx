@@ -78,7 +78,7 @@ describe('KeyStories', () => {
 
     expect(screen.getByText(/Top Damage/)).toBeInTheDocument();
     expect(screen.getByText('Executive Order Signed')).toBeInTheDocument();
-    expect(screen.getByText(/Top Distraction/)).toBeInTheDocument();
+    expect(screen.getByText(/Top Hype/)).toBeInTheDocument();
     expect(screen.getByText('Celebrity Tweet Storm')).toBeInTheDocument();
   });
 

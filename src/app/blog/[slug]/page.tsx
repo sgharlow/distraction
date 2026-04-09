@@ -20,6 +20,9 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
     title: post.title,
     description: post.meta_description ?? post.body_markdown.slice(0, 160),
     keywords: post.keywords,
+    alternates: {
+      canonical: `/blog/${post.slug}`,
+    },
     openGraph: {
       title: post.title,
       description: post.meta_description ?? undefined,

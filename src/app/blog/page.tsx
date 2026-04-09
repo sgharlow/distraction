@@ -8,6 +8,9 @@ import { NewsletterSignup } from '@/components/NewsletterSignup';
 export const metadata: Metadata = {
   title: 'Blog — Weekly Analysis',
   description: 'Weekly analysis of democratic damage vs. manufactured distractions, powered by data from The Distraction Index.',
+  alternates: {
+    canonical: '/blog',
+  },
   openGraph: {
     title: 'Blog — The Distraction Index',
     description: 'Weekly civic intelligence analysis backed by data.',

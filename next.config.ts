@@ -4,6 +4,16 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   trailingSlash: false,
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.distractionindex.org' }],
+        destination: 'https://distractionindex.org/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

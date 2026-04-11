@@ -20,9 +20,60 @@ export const metadata: Metadata = {
   },
 };
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'How are Damage and Hype scores calculated in The Distraction Index?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The Damage (Constitutional Damage) score uses 7 weighted drivers scored 0-5, combined with severity multipliers for durability, reversibility, and precedent, plus mechanism and scope modifiers. The Hype (Distraction/Hype) score combines Layer 1 raw hype metrics (55% weight) with Layer 2 strategic manipulation indicators (45% weight, modulated by intentionality evidence scored 0-15). Both are normalized to a 0-100 scale.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What data sources does The Distraction Index use?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The Distraction Index ingests articles from GDELT (free global event database), GNews (news aggregation API), and Google News RSS feeds. Articles are deduplicated, clustered into events using AI, and then each event is scored independently using Claude AI for both constitutional damage and distraction/hype metrics.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How often is The Distraction Index data updated?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The pipeline runs every 4 hours: article ingestion at the top of the hour and AI processing 5 minutes later. The current week updates live. Each week (Sunday through Saturday, Eastern Time) is frozen permanently at close, and individual events freeze after 48 hours or at week-end, whichever comes first. Post-freeze corrections are append-only.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Is The Distraction Index methodology transparent?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes, full algorithmic transparency is a core principle. The complete scoring formulas, driver weights, severity multipliers, mechanism modifiers, intentionality thresholds, and classification logic are published on the Methodology page. The source code is available on GitHub for independent verification.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Who created The Distraction Index?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The Distraction Index was created by Steve Harlow as an independent civic intelligence project. It launched in December 2024 and operates as a nonpartisan platform focused on algorithmic transparency and democratic accountability, not political advocacy.',
+      },
+    },
+  ],
+};
+
 export default function MethodologyPage() {
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <TopNav />
       <main className="mx-auto max-w-[900px] px-5 py-6">
         <h1 className="mb-1 font-serif text-xl font-bold text-text-primary">

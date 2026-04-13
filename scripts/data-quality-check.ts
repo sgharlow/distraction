@@ -137,7 +137,7 @@ async function main() {
   printSubHeader("Snapshots with event counts per week");
   const { data: snapshots, error: snapListErr } = await supabase
     .from("weekly_snapshots")
-    .select("week_id, status, distraction_index, total_events, list_a_count, list_b_count, list_c_count")
+    .select("week_id, status, max_smokescreen_index, total_events, list_a_count, list_b_count, list_c_count")
     .order("week_id", { ascending: true });
   if (snapListErr) {
     console.error("  ERROR:", snapListErr.message);
@@ -147,7 +147,7 @@ async function main() {
     const lowEventWeeks: string[] = [];
     for (const s of snapshots) {
       const total = s.total_events ?? 0;
-      console.log("  " + (s.week_id ?? "").padEnd(14) + (s.status ?? "").padEnd(12) + String(s.distraction_index ?? "-").padStart(6) + String(total).padStart(7) + String(s.list_a_count ?? "-").padStart(5) + String(s.list_b_count ?? "-").padStart(5) + String(s.list_c_count ?? "-").padStart(5));
+      console.log("  " + (s.week_id ?? "").padEnd(14) + (s.status ?? "").padEnd(12) + String(s.max_smokescreen_index ?? "-").padStart(6) + String(total).padStart(7) + String(s.list_a_count ?? "-").padStart(5) + String(s.list_b_count ?? "-").padStart(5) + String(s.list_c_count ?? "-").padStart(5));
       if (total < 5 && total >= 0) lowEventWeeks.push(s.week_id);
     }
     if (lowEventWeeks.length > 0) {

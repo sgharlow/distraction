@@ -79,3 +79,4 @@ scripts/outreach/engage.log
 
 # Encrypted secrets
 .secrets.enc
+.env*.local

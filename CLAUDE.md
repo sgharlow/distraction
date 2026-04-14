@@ -16,7 +16,7 @@ npm run test         # Run test suite (vitest)
 npm run test:watch   # Run tests in watch mode
 ```
 
-Test suite: 265 tests across Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, and admin API routes.
+Test suite: 288 tests across Vitest + React Testing Library. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, and admin API routes.
 
 ## Tech Stack
 
@@ -77,7 +77,7 @@ src/
   components/              # 17 React components (EventCard, DualScore, TopNav, etc.)
 supabase/migrations/       # SQL migrations (001-003)
 scripts/                   # Backfill, data quality, manual operations
-tests/                     # 20 test files (vitest)
+tests/                     # 29 test files (vitest)
 ```
 
 ## Pipeline Architecture (Split for Vercel 60s limit)

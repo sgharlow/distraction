@@ -911,9 +911,12 @@ async function main() {
       }
     }
     await forcePost(slot, skipDedup);
+    process.exit(0);
   } else {
     await runSchedulerLoop();
+    return;
   }
+  process.exit(0);
 }
 
 main().catch(err => {

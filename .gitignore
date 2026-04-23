@@ -76,6 +76,7 @@ scripts/outreach/.substack-session/
 scripts/outreach/cascade.log
 scripts/outreach/email-followup.log
 scripts/outreach/engage.log
+scripts/outreach/.task-backups-*/
 
 # Encrypted secrets
 .secrets.enc

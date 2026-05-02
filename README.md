@@ -36,7 +36,7 @@ Weeks run Sunday-Saturday (ET). The current week updates live; past weeks freeze
 npm install          # Install dependencies
 npm run dev          # Start dev server at localhost:3000
 npm run build        # Production build
-npm run test         # Run 180 tests across 18 files
+npm run test         # Run 370 tests across 36 files
 npm run lint         # ESLint
 ```
 

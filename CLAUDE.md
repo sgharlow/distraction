@@ -16,7 +16,7 @@ npm run test         # Run test suite (vitest)
 npm run test:watch   # Run tests in watch mode
 ```
 
-Test suite: 370 tests across 36 files (Vitest + React Testing Library). Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, admin API routes, rate limiting, source classification, robots.txt, and Google indexing.
+Test suite: ≈370 tests (verify with `npx vitest run`) across 29 test files under `tests/` (Vitest + React Testing Library). The "370 / 36 files" figures were asserted in a doc-sync commit without a live run — 36 is unverified; 29 is the actual file count as of the last glob. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, admin API routes, rate limiting, source classification, robots.txt, and Google indexing.
 
 ## Tech Stack
 
@@ -77,7 +77,8 @@ src/
   components/              # 17 React components (EventCard, DualScore, TopNav, etc.)
 supabase/migrations/       # SQL migrations (001-003)
 scripts/                   # Backfill, data quality, manual operations
-tests/                     # 36 test files (vitest)
+scripts/outreach/          # Outreach automation (run-all.ts orchestrates 5 channels: bluesky, mastodon, email, forms, reddit; additional standalone scripts for linkedin, twitter, threads, substack)
+tests/                     # 29 test files (vitest) — see note above on count
 ```
 
 ## Pipeline Architecture (Split for Vercel 60s limit)

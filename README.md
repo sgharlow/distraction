@@ -36,9 +36,11 @@ Weeks run Sunday-Saturday (ET). The current week updates live; past weeks freeze
 npm install          # Install dependencies
 npm run dev          # Start dev server at localhost:3000
 npm run build        # Production build
-npm run test         # Run 370 tests across 36 files
+npm run test         # Run tests (≈370 tests — verify count with `npx vitest run`)
 npm run lint         # ESLint
 ```
+
+> **Note on test count:** The "370 tests / 36 files" figure was asserted in a doc-sync commit without a live run. The actual test-file count under `tests/` is 29 files; run `npx vitest run` to get the authoritative number.
 
 ## Pipeline
 
@@ -54,7 +56,13 @@ The ingestion pipeline runs automatically every 4 hours:
 - `PLAN.md` — Implementation plan with phases and architecture
 - `distraction-index-spec-v2.2.md` — Complete product specification (algorithms, data model, UI)
 
+## Outreach Automation
+
+`scripts/outreach/run-all.ts` orchestrates **5 channels**: bluesky, mastodon, email, forms, reddit. Additional standalone scripts exist for linkedin, twitter, threads, and substack but are not wired into the run-all orchestrator.
+
 ## Data
+
+> **Note:** The figures below are as of the February 2026 soft-launch build; live counts have grown since then.
 
 - 59+ weeks of historical data (Dec 29, 2024 - present)
 - 1,500+ scored events

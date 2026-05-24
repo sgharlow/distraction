@@ -1,3 +1,7 @@
+> **HISTORICAL DOCUMENT — SITE IS LIVE.**
+> distractionindex.org launched in February 2026. All 8 phases are complete.
+> The domain-registration section (Section 2) and pre-launch checklists below are preserved for context only — they are no longer actionable.
+
 # The Distraction Index — Full Implementation Plan
 
 ## Executive Summary

@@ -23,8 +23,8 @@ derived:
 gates:
   - id: monetize-or-civic
     metric: explicit_model_decision (premium API tier / pro subscription / deliberate free-civic with a cost cap / sunset)
-    target: "decision recorded, with a monthly infra-cost ceiling attached  # PROPOSED — Steve to ratify"
-    kill: "no decision by 2026-09-30 -> reduce ingestion cadence to daily + maintenance mode (cost floor)  # PROPOSED"
+    target: "decision recorded, with a monthly infra-cost ceiling attached  # ratified by Steve 2026-07-01"
+    kill: "no decision by 2026-09-30 -> reduce ingestion cadence to daily + maintenance mode (cost floor)  # ratified 2026-07-01"
     owner: steve
     due: 2026-08-31
 

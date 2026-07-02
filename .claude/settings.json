@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '── PROJECT.yaml (contract) ──' && grep -E '^(name|ladder):|^  - id:|^    due:' PROJECT.yaml && echo '(gates past due outrank feature work — /roadmap-lint for full check)'"
+          }
+        ]
+      }
+    ]
+  }
+}

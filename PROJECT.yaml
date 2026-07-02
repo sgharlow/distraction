@@ -1,0 +1,37 @@
+# PROJECT.yaml — machine-readable project contract. Single source of truth for volatile
+# facts and gates; prose docs reference this file, they never restate its values.
+# Standard: global CLAUDE.md "Documentation & Claim Discipline" (2026-07-01). Checked by /roadmap-lint.
+
+name: distraction
+
+# Per the 2026-07-01 lint, PLAN.md coexists with distraction-index-spec-v2.2.md (mildly ambiguous) —
+# this pointer forces the decision: PLAN.md is the plan; the spec is the design reference.
+authoritative_plan: PLAN.md
+
+# customer-used = live at distractionindex.org with a real public audience (59+ weeks of data,
+# newsletter subscribers, automated 4-hourly ingestion) — a FREE audience product; no revenue rung.
+ladder: customer-used
+
+derived:
+  test_count: "grep -rE '\\b(it|test)\\(' src --include='*.test.*' 2>/dev/null | wc -l   # static proxy; true count via npx vitest run"
+  head: "git rev-parse --short HEAD"
+  branch: "git branch --show-current"
+
+# The Q3 sunset review (2026-07-01) flagged this repo ZOMBIE-adjacent: a live product with real
+# ongoing compute (ingestion every 4h) and NO revenue mechanism, no gate, no retire criterion.
+# This gate is the counterweight — decide what the index is FOR, on a date.
+gates:
+  - id: monetize-or-civic
+    metric: explicit_model_decision (premium API tier / pro subscription / deliberate free-civic with a cost cap / sunset)
+    target: "decision recorded, with a monthly infra-cost ceiling attached  # PROPOSED — Steve to ratify"
+    kill: "no decision by 2026-09-30 -> reduce ingestion cadence to daily + maintenance mode (cost floor)  # PROPOSED"
+    owner: steve
+    due: 2026-08-31
+
+market:
+  competitors_doc: docs/COMPETITORS.md   # not yet authored (Ground News, AllSides, Media Cloud — attention-analysis adjacents) — lint flags until it exists
+  wtp_evidence: none   # audience exists (subscribers); paying intent never tested — the spec's Revenue Stream table is prose
+
+monetization_path: none   # no billing/paywall code; the public v1 API + subscriber tooling are the natural surfaces if monetize-or-civic chooses monetize
+
+post_event_plan: "n/a — no terminal event; the monetize-or-civic gate is the fork"

@@ -5,9 +5,22 @@
 import { createClient } from '@/lib/supabase/server';
 import type { Event, Article, ScoreChange, SmokescreenPair } from '@/lib/types';
 
+/**
+ * Columns of score_changes readable by the anon role.
+ * llm_response and prompt_version are admin-only (column-level grant,
+ * see supabase/migrations/20260723000001_security_advisor_fixes.sql) —
+ * selecting `*` would fail with a permission error under the anon key.
+ */
+export type PublicScoreChange = Omit<ScoreChange, 'llm_response' | 'prompt_version'>;
+
+const SCORE_CHANGE_PUBLIC_COLUMNS =
+  'id, event_id, week_id, changed_at, changed_by, change_type, ' +
+  'old_a_score, new_a_score, old_b_score, new_b_score, old_list, new_list, ' +
+  'reason, version_before, version_after';
+
 export interface EventDetail extends Event {
   articles: Article[];
-  score_history: ScoreChange[];
+  score_history: PublicScoreChange[];
   smokescreen_for: Array<SmokescreenPair & { damage_event: Pick<Event, 'id' | 'title' | 'a_score' | 'b_score'> }>;
   smokescreened_by: Array<SmokescreenPair & { distraction_event: Pick<Event, 'id' | 'title' | 'a_score' | 'b_score'> }>;
 }
@@ -36,7 +49,7 @@ export async function getEventDetail(eventId: string): Promise<EventDetail | nul
       .order('published_at', { ascending: false }),
     supabase
       .from('score_changes')
-      .select('*')
+      .select(SCORE_CHANGE_PUBLIC_COLUMNS)
       .eq('event_id', eventId)
       .order('changed_at', { ascending: true }),
     supabase
@@ -75,7 +88,7 @@ export async function getEventDetail(eventId: string): Promise<EventDetail | nul
   return {
     ...(event as Event),
     articles: (articlesResult.data || []) as Article[],
-    score_history: (historyResult.data || []) as ScoreChange[],
+    score_history: (historyResult.data || []) as unknown as PublicScoreChange[],
     smokescreen_for: smokescreenFor,
     smokescreened_by: smokescreenedBy,
   };

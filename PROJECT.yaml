@@ -4,9 +4,11 @@
 
 name: distraction
 
-# Per the 2026-07-01 lint, PLAN.md coexists with distraction-index-spec-v2.2.md (mildly ambiguous) —
-# this pointer forces the decision: PLAN.md is the plan; the spec is the design reference.
-authoritative_plan: PLAN.md
+# Authority resolved 2026-07-24 (7-23 lint flagged the vacuum: PLAN.md banners itself HISTORICAL).
+# There is no forward plan doc — the product is live and in run-mode; the only open decision is the
+# monetize-or-civic gate below. This file IS the plan. PLAN.md = historical build record;
+# distraction-index-spec-v2.2.md = design reference; docs/superpowers/plans/* = executed build plans.
+authoritative_plan: PROJECT.yaml
 
 # customer-used = live at distractionindex.org with a real public audience (59+ weeks of data,
 # newsletter subscribers, automated 4-hourly ingestion) — a FREE audience product; no revenue rung.

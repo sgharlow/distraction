@@ -1,5 +1,10 @@
 # Growth Engine Plan A: SEO Foundation
 
+> **EXECUTED — checkboxes not maintained (reconciled 2026-07-24).** The work this plan describes
+> shipped: `/blog` and `/feed.xml` verified live on distractionindex.org 2026-07-24 (HTTP 200).
+> The 26 open `- [ ]` boxes below reflect tracking abandonment, not unshipped work — do not
+> action them from here. Authoritative status: `PROJECT.yaml`.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build blog infrastructure and generate 59+ indexed blog posts from historical week data, plus RSS feed and structured data — creating an instant SEO content library.

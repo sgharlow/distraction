@@ -1,6 +1,7 @@
-> **HISTORICAL DOCUMENT — SITE IS LIVE.**
+> **HISTORICAL DOCUMENT — SITE IS LIVE. SUPERSEDED BY PROJECT.yaml (2026-07-24).**
 > distractionindex.org launched in February 2026. All 8 phases are complete.
 > The domain-registration section (Section 2) and pre-launch checklists below are preserved for context only — they are no longer actionable.
+> Current status, gates (monetize-or-civic, due 8-31), and authority chain live in `PROJECT.yaml`.
 
 # The Distraction Index — Full Implementation Plan
 

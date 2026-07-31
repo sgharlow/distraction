@@ -30,6 +30,21 @@ gates:
     owner: steve
     due: 2026-08-31
 
+# Reliability posture, added 2026-07-31 after the July 2026 outage + blog-gap investigation.
+# Recorded here because it is NOT derivable from the code: the three checks look like ordinary
+# route handlers, and a future session could plausibly delete one as redundant. All three exist
+# because a real failure ran undetected — do not remove without replacing the signal.
+ops:
+  dead_mans_switch: /api/monitor   # daily cron, CRON_SECRET-authed; emails via Resend (Supabase-independent by design, so it fires when Supabase IS the outage)
+  health_endpoint: /api/health     # public; HTTP status driven by ingest freshness ONLY (stuck-week + missing-blog report in body, stay 200 — they are not outages)
+  monitored_silent_failures:
+    - ingest_freshness: "no article-bearing ingest inside the window — the July 2026 paused-Supabase outage, unnoticed 3 weeks"
+    - stuck_live_week: "week left status='live' past its scheduled freeze; no retroactive week-level freeze exists, so nothing else signals it (week 2026-07-05)"
+    - missing_blog: "frozen week whose cascade blog step never wrote — /api/freeze logs freeze_week() + pipeline_runs 'completed' BEFORE the cascade and swallows its errors, so this had NO signal at all for 17 weeks (67-83)"
+  known_fragility:
+    - "GDELT rate-limits hard (429s) on repeated backfill runs; scripts/backfill.ts --daily refuses to freeze a week under 5/7 days fetched rather than bake a distorted partial snapshot. A blocked backfill is the guard working, not a bug."
+    - "The freeze cascade runs INSIDE /api/freeze at maxDuration=30s. Any model call it makes must fit that budget — Sonnet (~46-50s) does not and is killed uncatchably; the blog step uses Haiku (~20s) for this reason."
+
 market:
   competitors_doc: docs/COMPETITORS.md   # not yet authored (Ground News, AllSides, Media Cloud — attention-analysis adjacents) — lint flags until it exists
   wtp_evidence: none   # audience exists (subscribers); paying intent never tested — the spec's Revenue Stream table is prose

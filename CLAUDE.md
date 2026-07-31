@@ -16,7 +16,7 @@ npm run test         # Run test suite (vitest)
 npm run test:watch   # Run tests in watch mode
 ```
 
-Test suite (Vitest + React Testing Library) under `tests/`. For the current count run `npx vitest run` — do not hand-copy a number here; it drifts. Last live run 2026-07-31 was 418 tests across 41 files (up from 401/40 after the missing-blog detector was added to the dead-man's-switch). Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, admin API routes, rate limiting, source classification, robots.txt, Google indexing, pipeline freshness monitoring, stuck-live-week detection, and missing-blog detection.
+Test suite (Vitest + React Testing Library) under `tests/`. For the current count run `npx vitest run` — do not hand-copy a number here; it drifts. Last live run 2026-07-31 was 448 tests across 42 files (up from 418/41 after the resumable backfill day-cache was added). Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, admin API routes, rate limiting, source classification, robots.txt, Google indexing, pipeline freshness monitoring, stuck-live-week detection, missing-blog detection, and backfill day-cache coverage/freeze gating.
 
 ## Tech Stack
 

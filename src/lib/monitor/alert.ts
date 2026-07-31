@@ -8,10 +8,12 @@
 
 import type { FreshnessStatus } from './freshness';
 import type { StuckWeekStatus } from './stuck-week';
+import type { MissingBlogStatus } from './missing-blog';
 
 export interface HealthReport {
   freshness: FreshnessStatus;
   stuck: StuckWeekStatus | null;
+  blogs?: MissingBlogStatus | null;
 }
 
 export interface AlertResult {
@@ -48,13 +50,19 @@ export async function sendHealthAlert(
   if (!to) return { sent: false, skippedReason: 'ALERT_EMAIL not set' };
 
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://distractionindex.org';
-  const { freshness, stuck } = report;
+  const { freshness, stuck, blogs } = report;
   const level = severity(report);
 
-  const subject =
-    level === 'critical'
-      ? `⚠️ Distraction Index pipeline ${freshness.state.toUpperCase()} — ingest not landing data`
-      : `⚠️ Distraction Index — week freeze missed (${stuck?.stuckWeeks.join(', ') ?? 'stuck week'})`;
+  // Subject names the most severe firing condition, so it reads correctly when
+  // only one of the three checks is unhealthy.
+  let subject: string;
+  if (level === 'critical') {
+    subject = `⚠️ Distraction Index pipeline ${freshness.state.toUpperCase()} — ingest not landing data`;
+  } else if (stuck && stuck.state !== 'ok') {
+    subject = `⚠️ Distraction Index — week freeze missed (${stuck.stuckWeeks.join(', ')})`;
+  } else {
+    subject = `⚠️ Distraction Index — blog post missing (${blogs?.missingWeeks.join(', ') ?? 'unknown week'})`;
+  }
 
   const lines: string[] = ['The Distraction Index dead-man\'s-switch fired.', ''];
 
@@ -74,12 +82,20 @@ export async function sendHealthAlert(
     lines.push(`Detail:           ${stuck.detail}`);
   }
 
+  // Missing-blog section (only when there is something to say).
+  if (blogs && blogs.state !== 'ok') {
+    lines.push('', '── Blog posts ──');
+    lines.push(`State:            ${blogs.state}`);
+    lines.push(`Detail:           ${blogs.detail}`);
+  }
+
   lines.push(
     '',
     'Likely causes: Supabase project paused, all ingestion feeds rate-limited/blocked,',
-    'the ingest cron stopped firing, or a Sunday freeze cron was missed. Check the',
-    'Supabase project state first (that was the July 2026 root cause), then the Vercel',
-    'cron logs for /api/ingest and /api/freeze.',
+    'the ingest cron stopped firing, a Sunday freeze cron was missed, or the freeze',
+    'cascade\'s blog step failed silently (it runs inside /api/freeze at maxDuration=30s',
+    'and its errors are not surfaced). Check the Supabase project state first (that was',
+    'the July 2026 root cause), then the Vercel cron logs for /api/ingest and /api/freeze.',
     '',
     `Health endpoint: ${site}/api/health`,
     `Site:            ${site}`,

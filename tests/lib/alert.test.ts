@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sendHealthAlert, type HealthReport } from '@/lib/monitor/alert';
 import type { FreshnessStatus } from '@/lib/monitor/freshness';
 import type { StuckWeekStatus } from '@/lib/monitor/stuck-week';
+import type { MissingBlogStatus } from '@/lib/monitor/missing-blog';
 
 const STALE: FreshnessStatus = {
   healthy: false, state: 'stale', lastSuccessfulIngestAt: '2026-07-09T00:00:00Z',
@@ -25,8 +26,19 @@ const STUCK_BAD: StuckWeekStatus = {
   detail: "1 week(s) still 'live' past their freeze window (+24h grace): 2026-07-05. A freeze cron was missed.",
 };
 
+const BLOGS_OK: MissingBlogStatus = {
+  healthy: true, state: 'ok', missingWeeks: [],
+  detail: 'No missing blog posts.',
+};
+
+const BLOGS_BAD: MissingBlogStatus = {
+  healthy: false, state: 'missing', missingWeeks: ['2026-07-12'],
+  detail: '1 frozen week(s) with scored events have NO blog post: 2026-07-12.',
+};
+
 const staleReport: HealthReport = { freshness: STALE, stuck: STUCK_OK };
 const stuckReport: HealthReport = { freshness: FRESH, stuck: STUCK_BAD };
+const blogReport: HealthReport = { freshness: FRESH, stuck: STUCK_OK, blogs: BLOGS_BAD };
 
 const ORIGINAL = { key: process.env.RESEND_API_KEY, to: process.env.ALERT_EMAIL };
 
@@ -82,6 +94,26 @@ describe('sendHealthAlert', () => {
     expect(payload.subject).toContain('2026-07-05');
     expect(payload.text).toContain('Week freeze');
     expect(payload.text).toContain('2026-07-05');
+  });
+
+  it('sends a blog-missing subject and names the week when only the blog is missing', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const res = await sendHealthAlert(blogReport, fetchImpl as unknown as typeof fetch);
+    expect(res.sent).toBe(true);
+    const payload = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body);
+    expect(payload.subject).toContain('blog post missing');
+    expect(payload.subject).toContain('2026-07-12');
+    expect(payload.text).toContain('Blog posts');
+    expect(payload.text).toContain('2026-07-12');
+  });
+
+  it('omits the blog section entirely when blogs are healthy', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    await sendHealthAlert({ freshness: STALE, stuck: STUCK_OK, blogs: BLOGS_OK }, fetchImpl as unknown as typeof fetch);
+    const payload = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body);
+    expect(payload.text).not.toContain('Blog posts');
+    // ...and the ingest problem still owns the subject.
+    expect(payload.subject).toContain('STALE');
   });
 
   it('reports an error (not throw) on a non-ok Resend response', async () => {

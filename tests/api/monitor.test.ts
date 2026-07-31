@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FreshnessStatus } from '@/lib/monitor/freshness';
 import type { StuckWeekStatus } from '@/lib/monitor/stuck-week';
+import type { MissingBlogStatus } from '@/lib/monitor/missing-blog';
 
-// ── Mock the freshness check, stuck-week check, and alert sender ──
+// ── Mock the freshness check, stuck-week check, missing-blog check, and alert sender ──
 const mockCheck = vi.fn();
 const mockStuck = vi.fn();
+const mockBlogs = vi.fn();
 const mockSend = vi.fn();
 
 vi.mock('@/lib/monitor/freshness', () => ({
@@ -12,6 +14,9 @@ vi.mock('@/lib/monitor/freshness', () => ({
 }));
 vi.mock('@/lib/monitor/stuck-week', () => ({
   checkStuckWeeks: (...args: unknown[]) => mockStuck(...args),
+}));
+vi.mock('@/lib/monitor/missing-blog', () => ({
+  checkMissingBlogs: (...args: unknown[]) => mockBlogs(...args),
 }));
 vi.mock('@/lib/monitor/alert', () => ({
   sendHealthAlert: (...args: unknown[]) => mockSend(...args),
@@ -47,6 +52,12 @@ const STUCK_OK: StuckWeekStatus = {
 const STUCK_BAD: StuckWeekStatus = {
   healthy: false, state: 'stuck', stuckWeeks: ['2026-07-05'], detail: 'freeze missed',
 };
+const BLOGS_OK: MissingBlogStatus = {
+  healthy: true, state: 'ok', missingWeeks: [], detail: 'no missing blogs',
+};
+const BLOGS_BAD: MissingBlogStatus = {
+  healthy: false, state: 'missing', missingWeeks: ['2026-07-12'], detail: 'blog never wrote',
+};
 
 describe('GET /api/monitor', () => {
   let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
@@ -54,8 +65,9 @@ describe('GET /api/monitor', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = 'test-cron-secret';
-    // Default both checks healthy; individual tests override.
+    // Default all checks healthy; individual tests override.
     mockStuck.mockResolvedValue(STUCK_OK);
+    mockBlogs.mockResolvedValue(BLOGS_OK);
     const mod = await import('@/app/api/monitor/route');
     handler = mod.GET;
   });
@@ -66,15 +78,17 @@ describe('GET /api/monitor', () => {
     expect(mockCheck).not.toHaveBeenCalled();
   });
 
-  it('does not send an alert when both checks are healthy', async () => {
+  it('does not send an alert when all checks are healthy', async () => {
     mockCheck.mockResolvedValue(FRESH);
     mockStuck.mockResolvedValue(STUCK_OK);
+    mockBlogs.mockResolvedValue(BLOGS_OK);
     const res = await handler(createRequest('test-cron-secret'));
-    const body = await res.json() as { ok: boolean; freshness: FreshnessStatus; stuck: StuckWeekStatus; alert: { sent: boolean } };
+    const body = await res.json() as { ok: boolean; freshness: FreshnessStatus; stuck: StuckWeekStatus; blogs: MissingBlogStatus; alert: { sent: boolean } };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.freshness.state).toBe('fresh');
     expect(body.stuck.state).toBe('ok');
+    expect(body.blogs.state).toBe('ok');
     expect(mockSend).not.toHaveBeenCalled();
     expect(body.alert.sent).toBe(false);
   });
@@ -86,7 +100,7 @@ describe('GET /api/monitor', () => {
     const res = await handler(createRequest('test-cron-secret'));
     const body = await res.json() as { alert: { sent: boolean } };
     expect(mockSend).toHaveBeenCalledOnce();
-    expect(mockSend).toHaveBeenCalledWith({ freshness: STALE, stuck: STUCK_OK });
+    expect(mockSend).toHaveBeenCalledWith({ freshness: STALE, stuck: STUCK_OK, blogs: BLOGS_OK });
     expect(body.alert.sent).toBe(true);
   });
 
@@ -97,7 +111,21 @@ describe('GET /api/monitor', () => {
     const res = await handler(createRequest('test-cron-secret'));
     const body = await res.json() as { alert: { sent: boolean } };
     expect(mockSend).toHaveBeenCalledOnce();
-    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_BAD });
+    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_BAD, blogs: BLOGS_OK });
+    expect(body.alert.sent).toBe(true);
+  });
+
+  it('sends an alert when a blog is missing even though ingest and freeze are fine', async () => {
+    // The weeks 67-83 signature: everything else looks healthy, no blog wrote.
+    mockCheck.mockResolvedValue(FRESH);
+    mockStuck.mockResolvedValue(STUCK_OK);
+    mockBlogs.mockResolvedValue(BLOGS_BAD);
+    mockSend.mockResolvedValue({ sent: true });
+    const res = await handler(createRequest('test-cron-secret'));
+    const body = await res.json() as { blogs: MissingBlogStatus; alert: { sent: boolean } };
+    expect(mockSend).toHaveBeenCalledOnce();
+    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_OK, blogs: BLOGS_BAD });
+    expect(body.blogs.missingWeeks).toEqual(['2026-07-12']);
     expect(body.alert.sent).toBe(true);
   });
 
@@ -120,6 +148,7 @@ describe('GET /api/health', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockStuck.mockResolvedValue(STUCK_OK);
+    mockBlogs.mockResolvedValue(BLOGS_OK);
     const mod = await import('@/app/api/health/route');
     handler = mod.GET;
   });
@@ -129,9 +158,10 @@ describe('GET /api/health', () => {
     mockStuck.mockResolvedValue(STUCK_OK);
     const res = await handler();
     expect(res.status).toBe(200);
-    const body = await res.json() as FreshnessStatus & { stuck: StuckWeekStatus };
+    const body = await res.json() as FreshnessStatus & { stuck: StuckWeekStatus; blogs: MissingBlogStatus };
     expect(body.healthy).toBe(true);
     expect(body.stuck.state).toBe('ok');
+    expect(body.blogs.state).toBe('ok');
   });
 
   it('returns 503 when ingest is stale (fail-closed for uptime monitors)', async () => {
@@ -151,5 +181,17 @@ describe('GET /api/health', () => {
     const body = await res.json() as FreshnessStatus & { stuck: StuckWeekStatus };
     expect(body.healthy).toBe(true);
     expect(body.stuck.state).toBe('stuck');
+  });
+
+  it('stays 200 when a blog is missing (content gap, not an outage — monitor owns that alert)', async () => {
+    mockCheck.mockResolvedValue(FRESH);
+    mockStuck.mockResolvedValue(STUCK_OK);
+    mockBlogs.mockResolvedValue(BLOGS_BAD);
+    const res = await handler();
+    expect(res.status).toBe(200);
+    const body = await res.json() as FreshnessStatus & { blogs: MissingBlogStatus };
+    expect(body.healthy).toBe(true);
+    expect(body.blogs.state).toBe('missing');
+    expect(body.blogs.missingWeeks).toEqual(['2026-07-12']);
   });
 });

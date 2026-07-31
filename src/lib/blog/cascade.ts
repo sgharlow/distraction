@@ -7,7 +7,7 @@
  * Designed to complete within Vercel's 30s timeout.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
-import { callSonnet, extractJSON } from '@/lib/claude';
+import { callHaiku, extractJSON } from '@/lib/claude';
 import { getWeekNumber } from '@/lib/weeks';
 import { notifyGoogleIndexingBatch, isGoogleIndexingConfigured } from '@/lib/google-indexing';
 
@@ -66,11 +66,28 @@ async function generateBlogPost(weekId: string): Promise<{ slug: string } | null
 
   const user = `Week ${weekNum} (${weekId}): ${allEvents.length} events scored. Top constitutional damage: ${listATop3}. Top distraction: ${listBTop3}. ${pairs?.length ?? 0} smokescreen pairs. Avg damage: ${avgDamage.toFixed(1)}. Avg distraction: ${avgDistraction.toFixed(1)}. Damage list (high damage): ${listA.length} events. Hype list (high hype): ${listB.length} events. Full report: https://distractionindex.org/week/${weekId}. Subscribe: https://distractionindex.substack.com`;
 
-  const response = await callSonnet(system, user, 3000);
+  // Use Haiku, not Sonnet: the freeze route runs at maxDuration=30s, but a
+  // Sonnet blog call takes ~46-50s and Vercel hard-kills the function before
+  // the insert (a platform timeout, uncatchable by the cascade's try/catch —
+  // which is why every freeze logged "completed" while the blog silently never
+  // wrote, weeks 67-83). Haiku returns in ~20s and fits the budget. This is
+  // also the model that produced all 66 backfilled blogs, so voice is unchanged.
+  // 2048 tokens amply covers the 1000-1500 word body (repro: ~1830 out-tokens).
+  const response = await callHaiku(system, user, 2048);
   const parsed = extractJSON<{ title: string; meta_description: string; body_markdown: string; keywords: string[] }>(response.text);
 
   const slug = `week-${weekNum}-${weekId}`;
-  const wordCount = parsed.body_markdown.split(/\s+/).length;
+  const wordCount = parsed.body_markdown?.trim() ? parsed.body_markdown.trim().split(/\s+/).length : 0;
+
+  // Fail-closed publish gate: refuse to publish an empty or truncated post.
+  // A too-short body means the response was truncated or malformed — better to
+  // fail loudly (and be caught + surfaced) than publish a broken post.
+  const MIN_WORDS = 300;
+  if (!parsed.title?.trim() || !parsed.body_markdown?.trim() || wordCount < MIN_WORDS) {
+    throw new Error(
+      `Blog generation produced insufficient content (title=${parsed.title?.length ?? 0} chars, body=${wordCount} words, min=${MIN_WORDS}). Not publishing.`,
+    );
+  }
 
   const { error } = await supabase.from('blog_posts').insert({
     slug,

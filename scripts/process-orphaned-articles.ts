@@ -28,8 +28,8 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !ANTHROPIC_KEY) {
   process.exit(1);
 }
 
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
-const SONNET_MODEL = 'claude-sonnet-4-5-20250929';
+const HAIKU_MODEL = 'claude-haiku-4-5';
+const SONNET_MODEL = 'claude-sonnet-5';
 
 // ── Args ──
 const args = process.argv.slice(2);
@@ -46,6 +46,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   db: { schema: 'distraction' },
 });
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY });
+
+// Extract the first text block from a Messages response. Sonnet 5 (adaptive
+// extended thinking) returns a `thinking` block as content[0] and the answer
+// in a later `text` block, so reading content[0] blindly yields '' and breaks
+// JSON.parse.
+function responseText(resp: { content: Array<{ type: string; text?: string }> }): string {
+  const block = resp.content.find((b) => b.type === 'text');
+  return block?.text ?? '';
+}
 
 // ── JSON extraction ──
 function extractJson(text: string): string {
@@ -104,23 +113,35 @@ async function identifyEvents(
     contextNote = `\n\nIMPORTANT — Events already tracked this week. Assign articles to existing events if they cover the same action. Only create new events for genuinely distinct events:\n${existingEventTitles.map((t) => `- ${t}`).join('\n')}`;
   }
 
-  const resp = await anthropic.messages.create({
-    model: HAIKU_MODEL,
-    max_tokens: 8192,
-    temperature: 0.2,
-    system: `You are a political event classifier for The Distraction Index. Given US political news articles from a specific week, identify 10-25 distinct EVENTS (not articles). Focus on Trump administration actions, DOJ/FBI, congressional responses, executive orders, court rulings, and manufactured distractions. Each event should map to one of: List A (governance damage), List B (distraction/hype), or List C (noise). Respond with ONLY a JSON array, no markdown fences or other text.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Identify distinct political events from these articles:\n\n${articleText}${contextNote}\n\nRespond with a raw JSON array (no markdown, no code fences):\n[\n  {\n    "title": "...",\n    "event_date": "YYYY-MM-DD",\n    "summary": "2-3 sentence factual summary",\n    "mechanism_of_harm": "policy_change|enforcement_action|personnel_capture|resource_reallocation|election_admin_change|judicial_legal_action|norm_erosion_only|information_operation|null",\n    "scope": "federal|multi_state|single_state|local|international",\n    "affected_population": "narrow|moderate|broad",\n    "actors": ["..."],\n    "institution": "...",\n    "topic_tags": ["..."],\n    "preliminary_list": "A|B|C",\n    "article_indices": [0, 3],\n    "confidence": 0.85\n  }\n]`,
-      },
-    ],
-  });
+  const system = `You are a political event classifier for The Distraction Index. Given US political news articles from a specific week, identify 10-25 distinct EVENTS (not articles). Focus on Trump administration actions, DOJ/FBI, congressional responses, executive orders, court rulings, and manufactured distractions. Each event should map to one of: List A (governance damage), List B (distraction/hype), or List C (noise). Respond with ONLY a JSON array, no markdown fences or other text.`;
+  const userContent = `Identify distinct political events from these articles:\n\n${articleText}${contextNote}\n\nRespond with a raw JSON array (no markdown, no code fences):\n[\n  {\n    "title": "...",\n    "event_date": "YYYY-MM-DD",\n    "summary": "2-3 sentence factual summary",\n    "mechanism_of_harm": "policy_change|enforcement_action|personnel_capture|resource_reallocation|election_admin_change|judicial_legal_action|norm_erosion_only|information_operation|null",\n    "scope": "federal|multi_state|single_state|local|international",\n    "affected_population": "narrow|moderate|broad",\n    "actors": ["..."],\n    "institution": "...",\n    "topic_tags": ["..."],\n    "preliminary_list": "A|B|C",\n    "article_indices": [0, 3],\n    "confidence": 0.85\n  }\n]`;
 
-  const text = resp.content[0].type === 'text' ? resp.content[0].text : '';
-  const tokens = { input: resp.usage.input_tokens, output: resp.usage.output_tokens };
-  const json = extractJson(text);
-  return { events: JSON.parse(json) as any[], tokens };
+  // Clustering used to be a single unguarded call: one transient Haiku miss
+  // ("Unexpected end of JSON input") silently dropped an ENTIRE batch of ~100
+  // articles (observed on the 2026-07-05 backfill, batch 4/5). Retry a few
+  // times before giving up so a transient parse failure doesn't lose a batch.
+  const tokens = { input: 0, output: 0 };
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const resp = await anthropic.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 8192,
+      temperature: 0.2,
+      system,
+      messages: [{ role: 'user', content: userContent }],
+    });
+    tokens.input += resp.usage.input_tokens;
+    tokens.output += resp.usage.output_tokens;
+    try {
+      const text = responseText(resp);
+      const json = extractJson(text);
+      return { events: JSON.parse(json) as any[], tokens };
+    } catch (err) {
+      lastErr = err;
+      console.log(`    (clustering parse failed, attempt ${attempt}/3: len=${responseText(resp).length}, stop=${resp.stop_reason})`);
+    }
+  }
+  throw lastErr ?? new Error('clustering failed with no parseable response');
 }
 
 // ── Score a single event ──
@@ -129,24 +150,35 @@ async function scoreEventWithClaude(
   articleHeadlines: string[],
 ) {
   const articlesText = articleHeadlines.slice(0, 20).map((h, i) => `${i + 1}. ${h}`).join('\n');
+  const systemPrompt = `You are the scoring engine for The Distraction Index v2.2. Score this event on BOTH the Constitutional Damage (A) and Distraction/Hype (B) scales. Use the exact formulas: A-score has 7 drivers (election:0.22, rule_of_law:0.18, separation:0.16, civil_rights:0.14, capture:0.14, corruption:0.10, violence:0.06) each 0-5, severity multipliers 0.8-1.3, mechanism/scope modifiers. B-score has Layer 1 hype (55%) and Layer 2 strategic (45% modulated by intentionality 0-15). Classification: D=A-B, List A if A>=25 AND D>=+10, List B if B>=25 AND D<=-10, Mixed if both>=25 AND |D|<10, Noise if A<25+no mechanism+noise indicators. Respond with ONLY raw JSON, no markdown fences. Keep score_rationale and action_item under 40 words each so the JSON is never truncated.`;
+  const userPrompt = `Score this event:\n\nTitle: ${event.title}\nSummary: ${event.summary}\nMechanism: ${event.mechanism || 'unknown'}\nScope: ${event.scope || 'unknown'}\nPopulation: ${event.affected_population || 'unknown'}\n\nArticles:\n${articlesText}\n\nRespond with raw JSON only (no markdown, no code fences):\n{\n  "a_score": { "drivers": { "election":0,"rule_of_law":0,"separation":0,"civil_rights":0,"capture":0,"corruption":0,"violence":0 }, "severity": { "durability":1.0,"reversibility":1.0,"precedent":1.0 }, "mechanism_modifier":1.0, "scope_modifier":1.0, "base_score":0, "final_score":0 },\n  "b_score": { "layer1": { "outrage_bait":0,"meme_ability":0,"novelty":0,"media_friendliness":0 }, "layer2": { "mismatch":0,"timing":0,"narrative_pivot":0,"pattern_match":0 }, "intentionality": { "indicators":[], "total":0 }, "intent_weight":0.10, "final_score":0 },\n  "primary_list":"A",\n  "is_mixed":false,\n  "noise_flag":false,\n  "noise_reason_codes":[],\n  "confidence":0.85,\n  "score_rationale":"...",\n  "action_item":"..."\n}`;
 
-  const resp = await anthropic.messages.create({
-    model: SONNET_MODEL,
-    max_tokens: 4096,
-    temperature: 0.2,
-    system: `You are the scoring engine for The Distraction Index v2.2. Score this event on BOTH the Constitutional Damage (A) and Distraction/Hype (B) scales. Use the exact formulas: A-score has 7 drivers (election:0.22, rule_of_law:0.18, separation:0.16, civil_rights:0.14, capture:0.14, corruption:0.10, violence:0.06) each 0-5, severity multipliers 0.8-1.3, mechanism/scope modifiers. B-score has Layer 1 hype (55%) and Layer 2 strategic (45% modulated by intentionality 0-15). Classification: D=A-B, List A if A>=25 AND D>=+10, List B if B>=25 AND D<=-10, Mixed if both>=25 AND |D|<10, Noise if A<25+no mechanism+noise indicators. Respond with ONLY raw JSON, no markdown fences.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Score this event:\n\nTitle: ${event.title}\nSummary: ${event.summary}\nMechanism: ${event.mechanism || 'unknown'}\nScope: ${event.scope || 'unknown'}\nPopulation: ${event.affected_population || 'unknown'}\n\nArticles:\n${articlesText}\n\nRespond with raw JSON only (no markdown, no code fences):\n{\n  "a_score": { "drivers": { "election":0,"rule_of_law":0,"separation":0,"civil_rights":0,"capture":0,"corruption":0,"violence":0 }, "severity": { "durability":1.0,"reversibility":1.0,"precedent":1.0 }, "mechanism_modifier":1.0, "scope_modifier":1.0, "base_score":0, "final_score":0 },\n  "b_score": { "layer1": { "outrage_bait":0,"meme_ability":0,"novelty":0,"media_friendliness":0 }, "layer2": { "mismatch":0,"timing":0,"narrative_pivot":0,"pattern_match":0 }, "intentionality": { "indicators":[], "total":0 }, "intent_weight":0.10, "final_score":0 },\n  "primary_list":"A",\n  "is_mixed":false,\n  "noise_flag":false,\n  "noise_reason_codes":[],\n  "confidence":0.85,\n  "score_rationale":"...",\n  "action_item":"..."\n}`,
-      },
-    ],
-  });
-
-  const text = resp.content[0].type === 'text' ? resp.content[0].text : '';
-  const tokens = { input: resp.usage.input_tokens, output: resp.usage.output_tokens };
-  const json = extractJson(text);
-  return { result: JSON.parse(json) as any, tokens };
+  // Sonnet 5 occasionally returns an empty or truncated body; JSON.parse then
+  // throws "Unexpected end of JSON input" and the event would be dropped. Retry
+  // a couple of times before giving up so a transient miss doesn't lose an event.
+  const tokens = { input: 0, output: 0 };
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const resp = await anthropic.messages.create({
+      model: SONNET_MODEL,
+      max_tokens: 4096,
+      // Sonnet 5 REJECTS `temperature` with HTTP 400 — do not send it here.
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+    const text = responseText(resp);
+    tokens.input += resp.usage.input_tokens;
+    tokens.output += resp.usage.output_tokens;
+    try {
+      const json = extractJson(text);
+      const result = JSON.parse(json) as any;
+      return { result, tokens };
+    } catch (err) {
+      lastErr = err;
+      console.log(`    (scoring parse failed, attempt ${attempt}/3: len=${text.length}, stop=${resp.stop_reason})`);
+    }
+  }
+  throw lastErr ?? new Error('scoring failed with no parseable response');
 }
 
 // ── Smokescreen pairing ──

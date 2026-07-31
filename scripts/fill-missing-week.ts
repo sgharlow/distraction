@@ -25,8 +25,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY });
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const SONNET_MODEL = 'claude-sonnet-4-5-20250929';
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+const SONNET_MODEL = 'claude-sonnet-5';
+const HAIKU_MODEL = 'claude-haiku-4-5';
+
+// Sonnet 5 (adaptive thinking) puts a `thinking` block at content[0] and the
+// answer in a later `text` block — select the text block wherever it is.
+function responseText(resp: { content: Array<{ type: string; text?: string }> }): string {
+  const block = resp.content.find((b) => b.type === 'text');
+  return block?.text ?? '';
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TARGET: Week of June 22-28, 2025
@@ -348,7 +355,7 @@ async function scoreEvent(event: ManualEvent) {
   const resp = await anthropic.messages.create({
     model: SONNET_MODEL,
     max_tokens: 4096,
-    temperature: 0.2,
+    // Sonnet 5 REJECTS `temperature` with HTTP 400 — do not send it here.
     system: systemPrompt,
     messages: [
       {
@@ -358,7 +365,7 @@ async function scoreEvent(event: ManualEvent) {
     ],
   });
 
-  const text = resp.content[0].type === 'text' ? resp.content[0].text : '';
+  const text = responseText(resp);
   const json = extractJson(text);
   return JSON.parse(json) as any;
 }
@@ -453,7 +460,8 @@ Return ONLY the summary text, no quotes or formatting.`;
     messages: [{ role: 'user', content: prompt }],
   });
 
-  return response.content[0].type === 'text' ? response.content[0].text.trim() : null;
+  const text = responseText(response).trim();
+  return text || null;
 }
 
 // ═══════════════════════════════════════════════════════════════

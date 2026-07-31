@@ -31,9 +31,10 @@ function formatArticlesForPrompt(articles: ArticleInput[]): string {
 export async function clusterArticlesIntoEvents(
   articles: ArticleInput[],
   existingEventTitles: string[] = [],
-): Promise<{ events: IdentifiedEvent[]; tokens: { input: number; output: number } }> {
+): Promise<{ events: IdentifiedEvent[]; tokens: { input: number; output: number }; errors: string[] }> {
+  const errors: string[] = [];
   if (articles.length === 0) {
-    return { events: [], tokens: { input: 0, output: 0 } };
+    return { events: [], tokens: { input: 0, output: 0 }, errors };
   }
 
   // Process in batches if too many articles
@@ -75,10 +76,16 @@ export async function clusterArticlesIntoEvents(
         allEvents.push(event);
       }
     } catch (err) {
-      console.error('Failed to parse event identification response:', err);
+      // A batch that fails to parse means its ~50 articles go unclustered.
+      // Surface it to the pipeline run (not just console) so a silently-failing
+      // clusterer is visible in pipeline_runs.errors, not swallowed.
+      const msg = err instanceof Error ? err.message : String(err);
+      const batchIdx = batches.indexOf(batch) + 1;
+      errors.push(`Cluster batch ${batchIdx}/${batches.length} parse failed (${batch.length} articles unclustered): ${msg}`);
+      console.error(`Failed to parse event identification response (batch ${batchIdx}):`, err);
       console.error('Response text:', response.text.slice(0, 500));
     }
   }
 
-  return { events: allEvents, tokens: { input: totalInput, output: totalOutput } };
+  return { events: allEvents, tokens: { input: totalInput, output: totalOutput }, errors };
 }

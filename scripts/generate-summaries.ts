@@ -65,13 +65,15 @@ Total events this week: ${events.length}
 Return ONLY the summary text, no quotes or formatting.`;
 
   const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-haiku-4-5',
     max_tokens: 300,
     temperature: 0.3,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const text = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
+  // Select the text block (a thinking-enabled model may prepend a thinking block).
+  const textBlock = response.content.find((b) => b.type === 'text');
+  const text = textBlock && textBlock.type === 'text' ? textBlock.text.trim() : null;
   return text;
 }
 

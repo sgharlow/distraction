@@ -47,7 +47,10 @@ export async function scoreEvent(params: {
     week_context: weekContext,
   });
 
-  const response = await callSonnet(DUAL_SCORING_SYSTEM, userPrompt, 4096);
+  // Sonnet 5's adaptive thinking shares the output budget with the answer JSON.
+  // The scoring JSON is ~600-900 tokens, but heavy thinking on a complex event
+  // could push a 4096 budget into truncating the answer. 8192 leaves headroom.
+  const response = await callSonnet(DUAL_SCORING_SYSTEM, userPrompt, 8192);
 
   const result = extractJSON<ScoringResult>(response.text);
 

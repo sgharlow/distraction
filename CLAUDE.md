@@ -16,7 +16,7 @@ npm run test         # Run test suite (vitest)
 npm run test:watch   # Run tests in watch mode
 ```
 
-Test suite: ≈370 tests (verify with `npx vitest run`) across 29 test files under `tests/` (Vitest + React Testing Library). The "370 / 36 files" figures were asserted in a doc-sync commit without a live run — 36 is unverified; 29 is the actual file count as of the last glob. Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, admin API routes, rate limiting, source classification, robots.txt, and Google indexing.
+Test suite (Vitest + React Testing Library) under `tests/`. For the current count run `npx vitest run` — do not hand-copy a number here; it drifts. Last live run 2026-07-30 was 401 tests across 40 files (up from 370/36 after the dead-man's-switch monitor added freshness/alert/monitor/health + stuck-week tests). Tests cover scoring algorithms, classification logic, smokescreen pairing, week utilities, dedup, UI components, API integration, error boundaries, admin API routes, rate limiting, source classification, robots.txt, Google indexing, pipeline freshness monitoring, and stuck-live-week detection.
 
 ## Tech Stack
 
@@ -24,7 +24,7 @@ Test suite: ≈370 tests (verify with `npx vitest run`) across 29 test files und
 - **Backend**: Next.js API routes + Vercel serverless functions
 - **Database**: Supabase (PostgreSQL) with `distraction` schema (not `public`)
 - **Auth**: Supabase Auth with `@supabase/ssr` (cookie-based sessions)
-- **AI Scoring**: Claude API — Haiku 4.5 for clustering, Sonnet 4.5 for dual scoring
+- **AI Scoring**: Claude API — Haiku 4.5 (`claude-haiku-4-5`) for clustering, Sonnet 5 (`claude-sonnet-5`) for dual scoring
 - **News Data**: GDELT (free) + GNews (free tier) + Google News RSS
 - **Hosting**: Vercel (deployed at `distraction-two.vercel.app`, domain `distractionindex.org`)
 - **Analytics**: Vercel Analytics

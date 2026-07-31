@@ -39,8 +39,18 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !ANTHROPIC_KEY) {
 const FIRST_WEEK = new Date('2024-12-29'); // Sun Dec 29, 2024
 const STATE_FILE = path.join(__dirname, '.backfill-state.json');
 
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
-const SONNET_MODEL = 'claude-sonnet-4-5-20250929';
+const HAIKU_MODEL = 'claude-haiku-4-5';
+const SONNET_MODEL = 'claude-sonnet-5';
+
+// Extract the first text block from a Messages response. Sonnet 5 (adaptive
+// extended thinking) returns a `thinking` block as content[0] and the answer
+// in a later `text` block, so reading content[0] blindly yields '' and breaks
+// JSON.parse. Selecting the text block wherever it is works with or without
+// a thinking block.
+function responseText(resp: { content: Array<{ type: string; text?: string }> }): string {
+  const block = resp.content.find((b) => b.type === 'text');
+  return block?.text ?? '';
+}
 
 // ── Arg parsing ──
 const args = process.argv.slice(2);
@@ -78,6 +88,7 @@ function extractJson(text: string): string {
 
 const DRY_RUN = hasFlag('dry-run');
 const RESUME = hasFlag('resume');
+const DAILY = hasFlag('daily'); // day-by-day GDELT fetch for full-week coverage
 const SINGLE_WEEK = getArg('week');
 const START_DATE = getArg('start');
 const END_DATE = getArg('end');
@@ -154,8 +165,34 @@ async function fetchGdeltForWeek(
     '(trump OR "executive order" OR DOJ OR "white house" OR congress OR "supreme court") sourcelang:english sourcecountry:US';
   const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=artlist&format=json&maxrecords=250&startdatetime=${fmtDt(weekStart)}&enddatetime=${fmtDt(addDays(weekEnd, 1))}&sort=datedesc`;
 
-  const resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
-  if (!resp.ok) throw new Error(`GDELT error: ${resp.status}`);
+  // GDELT rate-limits aggressively (429) and occasionally drops connections.
+  // Retry with exponential backoff so a transient failure doesn't zero out a week.
+  let resp: Response | null = null;
+  const MAX_ATTEMPTS = 5;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
+      if (resp.ok) break;
+      if (resp.status === 429 || resp.status >= 500) {
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = 15000 * attempt; // 15s, 30s, 45s, 60s
+          console.log(`      GDELT ${resp.status}, retry ${attempt}/${MAX_ATTEMPTS - 1} in ${wait / 1000}s...`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+      }
+      throw new Error(`GDELT error: ${resp.status}`);
+    } catch (err) {
+      if (attempt < MAX_ATTEMPTS) {
+        const wait = 15000 * attempt;
+        console.log(`      GDELT fetch error (${err instanceof Error ? err.message : err}), retry ${attempt}/${MAX_ATTEMPTS - 1} in ${wait / 1000}s...`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      throw err;
+    }
+  }
+  if (!resp || !resp.ok) throw new Error(`GDELT error: ${resp?.status ?? 'no response'}`);
   const data = await resp.json();
 
   return (data.articles || []).map((a: any) => ({
@@ -166,6 +203,39 @@ async function fetchGdeltForWeek(
       : format(weekStart, 'yyyy-MM-dd'),
     domain: a.domain || 'unknown',
   }));
+}
+
+// ── GDELT fetch, day-by-day (full-week coverage) ──
+// A single week-range GDELT call is capped at 250 records sorted datedesc, so it
+// only returns the newest sliver of a high-volume week. Fetching each day
+// separately gives the newest ~250/day and yields coverage comparable to the
+// live 4h cron accumulation. Used when --daily is passed.
+async function fetchGdeltDaily(
+  weekStart: Date,
+  weekEnd: Date,
+): Promise<{ articles: Array<{ url: string; title: string; date: string; domain: string }>; daysSucceeded: number; totalDays: number }> {
+  const all: Array<{ url: string; title: string; date: string; domain: string }> = [];
+  let totalDays = 0;
+  let daysSucceeded = 0;
+  for (let i = 0; i < 7; i++) {
+    const dayStart = addDays(weekStart, i);
+    if (isAfter(dayStart, weekEnd)) break;
+    totalDays++;
+    try {
+      // fetchGdeltForWeek(a, b) queries [a, b+1day); pass the same day for both
+      // to get a single 24h window.
+      const dayArticles = await fetchGdeltForWeek(dayStart, dayStart);
+      all.push(...dayArticles);
+      daysSucceeded++;
+      console.log(`    ${format(dayStart, 'MMM d')}: ${dayArticles.length} articles`);
+    } catch (err) {
+      console.error(`    ${format(dayStart, 'MMM d')}: GDELT fetch failed: ${err}`);
+    }
+    // GDELT is rate-limited (~1 req/5s tolerated, with a burst penalty); space
+    // the daily calls generously to avoid tripping a temporary block.
+    await new Promise((r) => setTimeout(r, 10000));
+  }
+  return { articles: all, daysSucceeded, totalDays };
 }
 
 // ── Dedup articles by URL and headline similarity ──
@@ -204,7 +274,7 @@ async function identifyEvents(
     ],
   });
 
-  const text = resp.content[0].type === 'text' ? resp.content[0].text : '';
+  const text = responseText(resp);
   const tokens = { input: resp.usage.input_tokens, output: resp.usage.output_tokens };
   const stopReason = resp.stop_reason;
 
@@ -222,13 +292,64 @@ async function identifyEvents(
       system: `You are a political event classifier. Identify 10-20 distinct US political events from these headlines. Respond with ONLY a JSON array, no markdown.`,
       messages: [{ role: 'user', content: `Headlines:\n${smallerText}\n\nJSON array of events with fields: title, event_date, summary, mechanism_of_harm, scope, affected_population, actors, institution, topic_tags, preliminary_list (A/B/C), article_indices, confidence.` }],
     });
-    const retryText = retry.content[0].type === 'text' ? retry.content[0].text : '';
+    const retryText = responseText(retry);
     const retryJson = extractJson(retryText);
     return { events: JSON.parse(retryJson) as any[], tokens: { input: tokens.input + retry.usage.input_tokens, output: tokens.output + retry.usage.output_tokens } };
   }
 
   const json = extractJson(text);
   return { events: JSON.parse(json) as any[], tokens };
+}
+
+// ── Batched clustering for daily mode ──
+// identifyEvents caps at 100 articles/call; a full week fetched day-by-day yields
+// far more. Cluster in sequential chunks (articles are day-grouped, so chunks stay
+// temporally contiguous → even weekly coverage), offset each chunk's article_indices
+// back to the global array, then dedup events that Haiku re-identifies across chunk
+// boundaries by normalized title.
+async function identifyEventsBatched(
+  articles: Array<{ title: string; domain: string; date: string }>,
+): Promise<{ events: any[]; tokens: { input: number; output: number } }> {
+  const CHUNK = 80;
+  const allEvents: any[] = [];
+  const tokens = { input: 0, output: 0 };
+
+  for (let start = 0; start < articles.length; start += CHUNK) {
+    const chunk = articles.slice(start, start + CHUNK);
+    console.log(`    clustering articles ${start}–${start + chunk.length - 1} (${chunk.length})...`);
+    try {
+      const { events, tokens: t } = await identifyEvents(chunk);
+      tokens.input += t.input;
+      tokens.output += t.output;
+      // Offset chunk-local article_indices back into the global articles array.
+      for (const ev of events) {
+        ev.article_indices = (ev.article_indices || [])
+          .filter((i: number) => i >= 0 && i < chunk.length)
+          .map((i: number) => i + start);
+        allEvents.push(ev);
+      }
+    } catch (err) {
+      console.error(`    chunk ${start}: clustering failed: ${err}`);
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+
+  // Dedup events by normalized title; merge article_indices of collisions.
+  const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const byTitle = new Map<string, any>();
+  for (const ev of allEvents) {
+    const key = norm(ev.title);
+    if (!key) continue;
+    const existing = byTitle.get(key);
+    if (existing) {
+      existing.article_indices = Array.from(
+        new Set([...(existing.article_indices || []), ...(ev.article_indices || [])]),
+      );
+    } else {
+      byTitle.set(key, ev);
+    }
+  }
+  return { events: Array.from(byTitle.values()), tokens };
 }
 
 async function scoreEventWithClaude(
@@ -251,7 +372,8 @@ async function scoreEventWithClaude(
   const resp = await anthropic.messages.create({
     model: SONNET_MODEL,
     max_tokens: 4096,
-    temperature: 0.2,
+    // Sonnet 5 REJECTS `temperature` with HTTP 400 — do not send it here.
+    // (Haiku 4.5 clustering calls above still send temperature; it accepts it.)
     system: systemPrompt,
     messages: [
       {
@@ -261,7 +383,7 @@ async function scoreEventWithClaude(
     ],
   });
 
-  const text = resp.content[0].type === 'text' ? resp.content[0].text : '';
+  const text = responseText(resp);
   const tokens = { input: resp.usage.input_tokens, output: resp.usage.output_tokens };
 
   const json = extractJson(text);
@@ -370,18 +492,28 @@ async function processWeek(
     return;
   }
 
-  // Create week snapshot (frozen for historical weeks)
-  const { error: weekError } = await supabase.rpc('create_week_snapshot', {
-    p_week_start: weekId,
-    p_status: 'frozen',
-  });
-  if (weekError) console.error('  Week snapshot error:', weekError.message);
-
-  // Fetch articles from GDELT
-  console.log('  Fetching GDELT articles...');
+  // Fetch articles from GDELT FIRST. The week snapshot is only created once we
+  // confirm we have articles — otherwise a GDELT failure would leave an empty
+  // frozen week published to the live site (defense-in-depth against that class
+  // of error).
+  console.log(`  Fetching GDELT articles${DAILY ? ' (day-by-day)' : ''}...`);
   let articles: Array<{ url: string; title: string; date: string; domain: string }> = [];
+  // In daily mode we also track how much of the week actually fetched, so a
+  // week that only partially succeeded (GDELT rate-limited most days) is NOT
+  // frozen as if it were complete.
+  let daysSucceeded = 0;
+  let totalDays = 7;
   try {
-    const raw = await fetchGdeltForWeek(weekStart, weekEnd);
+    let raw: Array<{ url: string; title: string; date: string; domain: string }>;
+    if (DAILY) {
+      const daily = await fetchGdeltDaily(weekStart, weekEnd);
+      raw = daily.articles;
+      daysSucceeded = daily.daysSucceeded;
+      totalDays = daily.totalDays;
+    } else {
+      raw = await fetchGdeltForWeek(weekStart, weekEnd);
+      daysSucceeded = totalDays; // single-shot fetch either works or throws
+    }
     articles = deduplicateArticles(raw);
     console.log(`  Found ${raw.length} articles, ${articles.length} after dedup`);
   } catch (err) {
@@ -391,17 +523,38 @@ async function processWeek(
   }
 
   if (articles.length < 5) {
-    console.log('  Too few articles, skipping event identification');
+    console.log('  Too few articles — NOT creating snapshot, skipping week');
+    state.errors.push({ week: weekId, error: `Only ${articles.length} articles; week skipped (no snapshot created)` });
     state.last_completed_week = weekId;
     saveState(state);
     return;
   }
 
+  // Thin-week guard: in daily mode, refuse to freeze a week that only partially
+  // fetched. A frozen historical week is permanent — publishing one built from
+  // 2 of 7 days would bake in a distorted, un-refreshable snapshot. Require most
+  // of the week (>=5/7 days) before creating the frozen snapshot.
+  if (DAILY && daysSucceeded < Math.ceil(totalDays * 5 / 7)) {
+    console.log(`  Only ${daysSucceeded}/${totalDays} days fetched — NOT freezing a partial week. Re-run once GDELT is not rate-limited.`);
+    state.errors.push({ week: weekId, error: `Partial fetch: ${daysSucceeded}/${totalDays} days; week skipped (no snapshot created)` });
+    saveState(state);
+    return;
+  }
+
+  // Create week snapshot (frozen for historical weeks) — only now that we have data.
+  const { error: weekError } = await supabase.rpc('create_week_snapshot', {
+    p_week_start: weekId,
+    p_status: 'frozen',
+  });
+  if (weekError) console.error('  Week snapshot error:', weekError.message);
+
   // Identify events via Haiku
   console.log('  Identifying events (Haiku)...');
   let identifiedEvents: any[];
   try {
-    const { events, tokens } = await identifyEvents(articles);
+    const { events, tokens } = DAILY
+      ? await identifyEventsBatched(articles)
+      : await identifyEvents(articles);
     identifiedEvents = events;
     state.total_tokens.input += tokens.input;
     state.total_tokens.output += tokens.output;

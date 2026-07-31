@@ -1,12 +1,12 @@
 // ═══════════════════════════════════════════════════════════════
 // Claude API Client — Thin wrapper over Anthropic SDK
-// Uses Haiku for cheap triage, Sonnet for accurate scoring
+// Uses Haiku 4.5 for cheap triage, Sonnet 5 for accurate scoring
 // ═══════════════════════════════════════════════════════════════
 
 import Anthropic from '@anthropic-ai/sdk';
 
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
-const SONNET_MODEL = 'claude-sonnet-4-5-20250929';
+const HAIKU_MODEL = 'claude-haiku-4-5';
+const SONNET_MODEL = 'claude-sonnet-5';
 
 let client: Anthropic | null = null;
 
@@ -32,18 +32,26 @@ async function callClaude(params: {
   temperature?: number;
 }): Promise<ClaudeResponse> {
   const anthropic = getClient();
-  const { model, system, user, maxTokens = 4096, temperature = 0.2 } = params;
+  const { model, system, user, maxTokens = 4096, temperature } = params;
 
+  // NOTE: Sonnet 5 (and the whole Opus-5/Sonnet-5 generation) REJECTS the
+  // `temperature` parameter with HTTP 400. Haiku 4.5 still accepts it. So we
+  // only send `temperature` when a caller explicitly opts in — callHaiku does,
+  // callSonnet does not.
   const response = await anthropic.messages.create({
     model,
     max_tokens: maxTokens,
-    temperature,
+    ...(temperature !== undefined ? { temperature } : {}),
     system,
     messages: [{ role: 'user', content: user }],
   });
 
-  const text =
-    response.content[0].type === 'text' ? response.content[0].text : '';
+  // Sonnet 5 (adaptive extended thinking) returns a `thinking` block as
+  // content[0] and the answer in a later `text` block. Reading content[0]
+  // blindly yields '' on any thinking response and breaks JSON.parse — so
+  // select the first text block wherever it is.
+  const textBlock = response.content.find((b) => b.type === 'text');
+  const text = textBlock && textBlock.type === 'text' ? textBlock.text : '';
 
   return {
     text,
@@ -57,7 +65,7 @@ async function callClaude(params: {
  * Call Claude Haiku for fast, cheap operations (event identification, triage).
  */
 export async function callHaiku(system: string, user: string, maxTokens?: number): Promise<ClaudeResponse> {
-  return callClaude({ model: HAIKU_MODEL, system, user, maxTokens });
+  return callClaude({ model: HAIKU_MODEL, system, user, maxTokens, temperature: 0.2 });
 }
 
 /**

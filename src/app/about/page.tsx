@@ -99,7 +99,7 @@ export default function AboutPage() {
             </div>
             <ul className="text-[13px] text-text-secondary space-y-1 m-0 pl-4">
               <li>Claude Haiku 4.5 &mdash; article clustering and event identification</li>
-              <li>Claude Sonnet 4.5 &mdash; dual-axis scoring (Damage and Hype)</li>
+              <li>Claude Sonnet 5 &mdash; dual-axis scoring (Damage and Hype)</li>
             </ul>
           </div>
         </section>

@@ -12,7 +12,7 @@ config({ path: resolve(__dirname, '../.env.local') });
 
 import Anthropic from '@anthropic-ai/sdk';
 
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+const HAIKU_MODEL = 'claude-haiku-4-5';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -114,7 +114,9 @@ Full report URL: https://distractionindex.org/week/${weekData.weekId}`;
     messages: [{ role: 'user', content: userPrompt }],
   });
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  // Select the text block (a thinking-enabled model may prepend a thinking block).
+  const textBlock = response.content.find((b) => b.type === 'text');
+  const text = textBlock && textBlock.type === 'text' ? textBlock.text : '';
   const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
   const jsonStr = fenceMatch ? fenceMatch[1].trim() : text.trim();
   const parsed = JSON.parse(jsonStr);

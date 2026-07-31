@@ -129,7 +129,25 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     // 8. Auto-freeze events older than 48h
     await supabase.rpc('auto_freeze_events');
 
-    // 9. Finish — articles stored, processing deferred to /api/process
+    // 9. Fail-closed gate: if EVERY source returned zero articles, all three
+    //    feeds are down (rate-limited/blocked/DNS) — the exact signature of the
+    //    July 2026 silent outage. Mark the run FAILED rather than "completed
+    //    with 0 articles", so a freshness/health monitor can distinguish a dead
+    //    pipeline from a quiet one. (We gate on articles_fetched, not
+    //    articles_new — zero *new* after dedup can be legitimate.)
+    if (articlesFetched === 0) {
+      errors.push('All ingestion sources returned 0 articles — feeds down or rate-limited.');
+      await finishRun(supabase, runId, 'failed', {
+        articles_fetched: 0,
+        articles_new: 0,
+        events_created: 0,
+        events_scored: 0,
+        errors,
+      });
+      throw new Error('Ingest produced 0 articles from all sources');
+    }
+
+    // 10. Finish — articles stored, processing deferred to /api/process
     await finishRun(supabase, runId, 'completed', {
       articles_fetched: articlesFetched,
       articles_new: freshArticles.length,
@@ -322,10 +340,12 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
     const existingEventTitles = (existingEvents || []).map((e) => e.title);
 
     // 4. Cluster articles into events (1 Claude Haiku call)
-    const { events: rawIdentifiedEvents, tokens: clusterTokens } =
+    const { events: rawIdentifiedEvents, tokens: clusterTokens, errors: clusterErrors } =
       await clusterArticlesIntoEvents(newArticles, existingEventTitles);
     totalInput += clusterTokens.input;
     totalOutput += clusterTokens.output;
+    // Surface any batch parse failures into the run record (I4 — no longer swallowed).
+    if (clusterErrors.length > 0) errors.push(...clusterErrors);
 
     // 4b. Post-clustering merge: deduplicate similar event titles
     const identifiedEvents = mergeIdentifiedEvents(rawIdentifiedEvents, existingEventTitles);

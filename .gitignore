@@ -44,6 +44,8 @@ next-env.d.ts
 
 # backfill state
 scripts/.backfill-state.json
+# backfill day-fetch cache (resumable GDELT day windows; see src/lib/ingestion/day-cache.ts)
+scripts/.backfill-cache/
 
 # playwright screenshots
 .playwright-mcp/

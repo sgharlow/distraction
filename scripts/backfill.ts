@@ -9,6 +9,16 @@
 //   npx tsx scripts/backfill.ts --week 2025-01-05
 //   npx tsx scripts/backfill.ts --dry-run
 //   npx tsx scripts/backfill.ts --resume
+//   npx tsx scripts/backfill.ts --week 2026-07-19 --daily   # resumable, see below
+//
+// TWO-PHASE RESUMABLE FETCH (--daily)
+//   Phase 1 fetches each of the week's 7 days and banks every confident result in
+//   scripts/.backfill-cache/<week>.json. NO database writes happen in this phase.
+//   Phase 2 creates + freezes the week only when >=5/7 days are banked.
+//   GDELT applies a multi-hour burst cooldown, so a run will often end mid-week:
+//   just re-run the SAME command later and it requests only the missing days.
+//   Re-running never re-requests a banked day and never re-processes a week that
+//   already has events (the events insert is not idempotent).
 //
 // Requires .env.local with SUPABASE and ANTHROPIC keys.
 // ═══════════════════════════════════════════════════════════════
@@ -22,6 +32,17 @@ import { addDays, format, isAfter } from 'date-fns';
 import * as fs from 'fs';
 import * as path from 'path';
 import { classifySource } from '../src/lib/ingestion/classify-source';
+import {
+  MIN_CONFIDENT_ARTICLES,
+  coverage,
+  daysToFetch,
+  loadWeekCache,
+  recordDay,
+  saveWeekCache,
+  usableArticles,
+  weekDayKeys,
+  type CachedArticle,
+} from '../src/lib/ingestion/day-cache';
 
 // ── Config ──
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -38,6 +59,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !ANTHROPIC_KEY) {
 
 const FIRST_WEEK = new Date('2024-12-29'); // Sun Dec 29, 2024
 const STATE_FILE = path.join(__dirname, '.backfill-state.json');
+// Per-week day-fetch caches, so a run interrupted by a GDELT cooldown does not
+// discard the days it DID fetch. See src/lib/ingestion/day-cache.ts.
+const DAY_CACHE_DIR = path.join(__dirname, '.backfill-cache');
 
 const HAIKU_MODEL = 'claude-haiku-4-5';
 const SONNET_MODEL = 'claude-sonnet-5';
@@ -159,7 +183,11 @@ async function fetchGdeltForWeek(
   weekStart: Date,
   weekEnd: Date,
 ): Promise<Array<{ url: string; title: string; date: string; domain: string }>> {
-  const fmtDt = (d: Date) => format(d, 'yyyyMMdd') + '000000';
+  // GDELT timestamps are UTC and article `seendate` values are UTC, so the query
+  // window must be built in UTC too. date-fns format() renders LOCAL time: on a
+  // UTC-7 machine format(new Date('2026-07-19'),'yyyyMMdd') yields 20260718,
+  // shifting every window a day earlier than the day it is labelled.
+  const fmtDt = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '') + '000000';
 
   const query =
     '(trump OR "executive order" OR DOJ OR "white house" OR congress OR "supreme court") sourcelang:english sourcecountry:US';
@@ -205,37 +233,148 @@ async function fetchGdeltForWeek(
   }));
 }
 
-// ── GDELT fetch, day-by-day (full-week coverage) ──
+// ── Single-day GDELT fetch that reports status instead of throwing ──
+// The cache needs to distinguish "GDELT said no" (429 cooldown — retry later)
+// from "GDELT answered and the day is genuinely quiet". Throwing loses that.
+// One attempt only: a burst cooldown lasts hours, so the old 4x15-60s backoff
+// spent ~2.5 minutes per day to arrive at the same 429.
+async function fetchGdeltDay(
+  dayStart: Date,
+): Promise<{ httpStatus: number; articles: CachedArticle[] }> {
+  const stamp = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '') + '000000';
+  const query =
+    '(trump OR "executive order" OR DOJ OR "white house" OR congress OR "supreme court") sourcelang:english sourcecountry:US';
+  const nextDay = new Date(dayStart.getTime() + 86400000);
+  const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=artlist&format=json&maxrecords=250&startdatetime=${stamp(dayStart)}&enddatetime=${stamp(nextDay)}&sort=datedesc`;
+
+  let resp: Response;
+  try {
+    resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
+  } catch (err) {
+    console.error(`      network error: ${err instanceof Error ? err.message : err}`);
+    return { httpStatus: 0, articles: [] };
+  }
+  if (!resp.ok) return { httpStatus: resp.status, articles: [] };
+
+  // A throttled GDELT sometimes returns 200 with a plain-text advisory body
+  // rather than JSON. Treat an unparseable body as a failed fetch, not an
+  // empty day — otherwise it would be cached as "0 articles, complete".
+  let data: { articles?: Array<Record<string, string>> };
+  try {
+    data = await resp.json();
+  } catch {
+    console.error('      200 with non-JSON body (throttle advisory) — treating as failure');
+    return { httpStatus: 0, articles: [] };
+  }
+
+  const articles = (data.articles || []).map((a) => ({
+    url: a.url,
+    title: a.title || '',
+    date: a.seendate
+      ? `${a.seendate.slice(0, 4)}-${a.seendate.slice(4, 6)}-${a.seendate.slice(6, 8)}`
+      : dayStart.toISOString().slice(0, 10),
+    domain: a.domain || 'unknown',
+  }));
+  return { httpStatus: resp.status, articles };
+}
+
+// ── GDELT fetch, day-by-day, RESUMABLE (full-week coverage) ──
 // A single week-range GDELT call is capped at 250 records sorted datedesc, so it
 // only returns the newest sliver of a high-volume week. Fetching each day
 // separately gives the newest ~250/day and yields coverage comparable to the
 // live 4h cron accumulation. Used when --daily is passed.
+//
+// PHASE 1 of the two-phase design: this function performs NO database writes. It
+// requests only the days not already cached, records each confident success, and
+// returns the accumulated coverage. Re-running after a cooldown resumes instead
+// of starting over — before this, three separate runs each reached 4/7 for week
+// 2026-07-19 and each discarded everything.
 async function fetchGdeltDaily(
   weekStart: Date,
   weekEnd: Date,
-): Promise<{ articles: Array<{ url: string; title: string; date: string; domain: string }>; daysSucceeded: number; totalDays: number }> {
-  const all: Array<{ url: string; title: string; date: string; domain: string }> = [];
-  let totalDays = 0;
-  let daysSucceeded = 0;
+): Promise<{ articles: CachedArticle[]; daysSucceeded: number; totalDays: number }> {
+  const weekId = weekStart.toISOString().slice(0, 10);
+  // Only count days that actually belong to this week AND are not in the future.
+  let dayCount = 0;
   for (let i = 0; i < 7; i++) {
-    const dayStart = addDays(weekStart, i);
-    if (isAfter(dayStart, weekEnd)) break;
-    totalDays++;
-    try {
-      // fetchGdeltForWeek(a, b) queries [a, b+1day); pass the same day for both
-      // to get a single 24h window.
-      const dayArticles = await fetchGdeltForWeek(dayStart, dayStart);
-      all.push(...dayArticles);
-      daysSucceeded++;
-      console.log(`    ${format(dayStart, 'MMM d')}: ${dayArticles.length} articles`);
-    } catch (err) {
-      console.error(`    ${format(dayStart, 'MMM d')}: GDELT fetch failed: ${err}`);
-    }
-    // GDELT is rate-limited (~1 req/5s tolerated, with a burst penalty); space
-    // the daily calls generously to avoid tripping a temporary block.
-    await new Promise((r) => setTimeout(r, 10000));
+    if (isAfter(addDays(weekStart, i), weekEnd)) break;
+    dayCount++;
   }
-  return { articles: all, daysSucceeded, totalDays };
+  const expectedDays = weekDayKeys(weekStart, dayCount);
+
+  let cache = loadWeekCache(DAY_CACHE_DIR, weekId);
+  let cov = coverage(cache, expectedDays);
+
+  if (cov.usable.length > 0) {
+    console.log(
+      `    cache: ${cov.usable.length}/${expectedDays.length} days already fetched (${cov.usable.join(', ')})`,
+    );
+  }
+
+  const todo = daysToFetch(cov);
+  if (todo.length === 0) {
+    console.log('    cache: week already complete, no GDELT requests needed');
+  }
+
+  // While GDELT is in its burst-penalty cooldown EVERY request 429s, and each
+  // one may extend the penalty. Bail after this many consecutive refusals rather
+  // than spending the rest of the week's requests confirming the same answer.
+  const MAX_CONSECUTIVE_REFUSALS = 2;
+  let consecutiveRefusals = 0;
+
+  let requested = 0;
+  for (const dayKey of todo) {
+    if (consecutiveRefusals >= MAX_CONSECUTIVE_REFUSALS) {
+      console.log(
+        `    GDELT refused ${consecutiveRefusals} requests in a row — in cooldown, stopping early to avoid extending it.`,
+      );
+      break;
+    }
+    const dayStart = new Date(`${dayKey}T00:00:00Z`);
+    // Pace requests. GDELT tolerates ~1 req/5s but applies a multi-hour burst
+    // penalty; 10s is what the pre-existing implementation used.
+    if (requested > 0) await new Promise((r) => setTimeout(r, 10000));
+    requested++;
+
+    const { httpStatus, articles } = await fetchGdeltDay(dayStart);
+    // 429 / network failure = refusal. A 200 (even a thin one) means GDELT is
+    // answering, so the cooldown is over and the counter resets.
+    if (httpStatus === 200) consecutiveRefusals = 0;
+    else consecutiveRefusals++;
+    const result = recordDay(cache, {
+      date: dayKey,
+      source: 'gdelt',
+      http_status: httpStatus,
+      count: articles.length,
+      fetched_at: new Date().toISOString(),
+      articles,
+    });
+    cache = result.cache;
+
+    if (result.cached) {
+      console.log(`    ${dayKey}: ${articles.length} articles (cached)`);
+      saveWeekCache(DAY_CACHE_DIR, cache);
+    } else if (httpStatus === 200) {
+      // Answered, but under the volume floor — cannot be told apart from a
+      // throttled/truncated response, so it is not banked.
+      console.log(
+        `    ${dayKey}: only ${articles.length} articles (< ${MIN_CONFIDENT_ARTICLES} floor) — NOT cached, will retry`,
+      );
+    } else {
+      console.log(`    ${dayKey}: GDELT ${httpStatus || 'unreachable'} — NOT cached, will retry`);
+    }
+  }
+
+  cov = coverage(cache, expectedDays);
+  const articles = usableArticles(cache, expectedDays);
+  console.log(
+    `    coverage: ${cov.usable.length}/${expectedDays.length} days usable (need ${cov.required}), ${articles.length} articles banked`,
+  );
+  if (!cov.canFreeze && daysToFetch(cov).length > 0) {
+    console.log(`    still needed: ${daysToFetch(cov).join(', ')}`);
+  }
+
+  return { articles, daysSucceeded: cov.usable.length, totalDays: expectedDays.length };
 }
 
 // ── Dedup articles by URL and headline similarity ──
@@ -480,7 +619,10 @@ async function processWeek(
   state: BackfillState,
 ) {
   const weekEnd = addDays(weekStart, 6);
-  const weekId = format(weekStart, 'yyyy-MM-dd');
+  // UTC, not date-fns format(): week_id is the primary key every article and
+  // event FKs to, and format() renders local time (a UTC-7 machine turns
+  // 2026-07-19 into 2026-07-18 and would write the neighbouring week).
+  const weekId = weekStart.toISOString().slice(0, 10);
   const label = `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
 
   console.log(`\n${'='.repeat(60)}`);
@@ -489,6 +631,36 @@ async function processWeek(
 
   if (DRY_RUN) {
     console.log('  [DRY RUN] Would fetch GDELT, identify events, score them');
+    return;
+  }
+
+  // HARD REFUSAL: never re-process a week that already has events.
+  // Articles are idempotent (url UNIQUE + upsert ignoreDuplicates), but the
+  // events insert is a plain .insert() — re-running a week that already scored
+  // would duplicate every event and inflate compute_week_stats off the
+  // duplicates, permanently, in a frozen snapshot. The day cache makes re-runs
+  // routine, so this guard is what keeps them safe.
+  const { data: existingWeek } = await supabase
+    .from('weekly_snapshots')
+    .select('week_id, status')
+    .eq('week_id', weekId)
+    .maybeSingle();
+  const { count: existingEvents } = await supabase
+    .from('events')
+    .select('id', { count: 'exact', head: true })
+    .eq('week_id', weekId);
+
+  if ((existingEvents ?? 0) > 0) {
+    console.log(
+      `  Week already has ${existingEvents} event(s) (status: ${existingWeek?.status ?? 'unknown'}) — REFUSING to re-process.`,
+    );
+    console.log('  The events insert is not idempotent; re-running would duplicate them.');
+    state.errors.push({
+      week: weekId,
+      error: `Already has ${existingEvents} events (status ${existingWeek?.status ?? '?'}); skipped to avoid duplicates`,
+    });
+    state.last_completed_week = weekId;
+    saveState(state);
     return;
   }
 
@@ -530,13 +702,19 @@ async function processWeek(
     return;
   }
 
-  // Thin-week guard: in daily mode, refuse to freeze a week that only partially
-  // fetched. A frozen historical week is permanent — publishing one built from
-  // 2 of 7 days would bake in a distorted, un-refreshable snapshot. Require most
-  // of the week (>=5/7 days) before creating the frozen snapshot.
+  // Thin-week guard (PHASE 2 gate): in daily mode, refuse to freeze a week that
+  // only partially fetched. A frozen historical week is permanent — publishing one
+  // built from 2 of 7 days would bake in a distorted, un-refreshable snapshot.
+  // Require most of the week (>=5/7 days) before creating the frozen snapshot.
+  //
+  // Days counted here are GDELT days that each cleared the volume floor, so the
+  // threshold means what it was calibrated to mean. Unlike before, a refusal now
+  // KEEPS the days already fetched (in DAY_CACHE_DIR): re-running after the
+  // cooldown resumes from here instead of starting over.
   if (DAILY && daysSucceeded < Math.ceil(totalDays * 5 / 7)) {
-    console.log(`  Only ${daysSucceeded}/${totalDays} days fetched — NOT freezing a partial week. Re-run once GDELT is not rate-limited.`);
-    state.errors.push({ week: weekId, error: `Partial fetch: ${daysSucceeded}/${totalDays} days; week skipped (no snapshot created)` });
+    console.log(`  Only ${daysSucceeded}/${totalDays} days fetched — NOT freezing a partial week.`);
+    console.log('  Progress is cached. Re-run the same command after the GDELT cooldown to continue.');
+    state.errors.push({ week: weekId, error: `Partial fetch: ${daysSucceeded}/${totalDays} days; week skipped (no snapshot created), progress cached` });
     saveState(state);
     return;
   }

@@ -10,6 +10,7 @@
 //   npx tsx scripts/backfill.ts --dry-run
 //   npx tsx scripts/backfill.ts --resume
 //   npx tsx scripts/backfill.ts --week 2026-07-19 --daily   # resumable, see below
+//   npx tsx scripts/backfill.ts --week 2026-07-19 --daily --archive  # cooldown-free source
 //
 // TWO-PHASE RESUMABLE FETCH (--daily)
 //   Phase 1 fetches each of the week's 7 days and banks every confident result in
@@ -19,6 +20,17 @@
 //   just re-run the SAME command later and it requests only the missing days.
 //   Re-running never re-requests a banked day and never re-processes a week that
 //   already has events (the events insert is not idempotent).
+//
+// ARCHIVE SOURCE (--archive, with --daily)
+//   Fills only the days NOT already banked from the GDELT raw-archive (GKG) reader
+//   (src/lib/ingestion/gdelt-archive.ts) instead of the throttled DOC API. The
+//   archive is a static CDN with no rate limiter, so it bypasses the cooldown that
+//   blocks --daily. Output is US-filtered and capped to 250/day, validated
+//   head-to-head against a DOC-cached day as comparable (same volume, 100% titled,
+//   source_type distribution within 0.4pp). DOC-sourced banked days are left as-is,
+//   so a week can legitimately mix DOC + archive days — both are the same corpus,
+//   same method, same cap. Archive days are labelled source='gdelt-archive' in the
+//   cache for provenance.
 //
 // Requires .env.local with SUPABASE and ANTHROPIC keys.
 // ═══════════════════════════════════════════════════════════════
@@ -43,6 +55,7 @@ import {
   weekDayKeys,
   type CachedArticle,
 } from '../src/lib/ingestion/day-cache';
+import { fetchGkgDay } from '../src/lib/ingestion/gdelt-archive';
 
 // ── Config ──
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -62,6 +75,14 @@ const STATE_FILE = path.join(__dirname, '.backfill-state.json');
 // Per-week day-fetch caches, so a run interrupted by a GDELT cooldown does not
 // discard the days it DID fetch. See src/lib/ingestion/day-cache.ts.
 const DAY_CACHE_DIR = path.join(__dirname, '.backfill-cache');
+// Exclusive run lock. The DB refusal guard (in processWeek) is a check-then-act
+// read of the event count and is therefore NOT atomic: two backfill processes
+// started close together both read 0 existing events and both insert a full set,
+// silently DOUBLING a frozen week (this happened to 2026-07-19: 423+416=839
+// events, 165 doubled titles). A single-machine lock makes concurrent runs
+// impossible rather than merely discouraged — the second process exits before
+// touching GDELT, Claude, or the DB. See acquireRunLock().
+const LOCK_FILE = path.join(__dirname, '.backfill.lock');
 
 const HAIKU_MODEL = 'claude-haiku-4-5';
 const SONNET_MODEL = 'claude-sonnet-5';
@@ -113,6 +134,10 @@ function extractJson(text: string): string {
 const DRY_RUN = hasFlag('dry-run');
 const RESUME = hasFlag('resume');
 const DAILY = hasFlag('daily'); // day-by-day GDELT fetch for full-week coverage
+// Fill missing days from the GDELT raw-archive (GKG) reader instead of the
+// throttled DOC API. Only affects days NOT already banked — DOC-sourced days
+// stay as they are. See fetchArchiveDay + src/lib/ingestion/gdelt-archive.ts.
+const ARCHIVE = hasFlag('archive');
 const SINGLE_WEEK = getArg('week');
 const START_DATE = getArg('start');
 const END_DATE = getArg('end');
@@ -176,6 +201,72 @@ function loadState(): BackfillState {
 
 function saveState(state: BackfillState) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+// ── Exclusive run lock (prevents the concurrent double-insert incident) ──
+// Uses O_EXCL create (the 'wx' flag): the open atomically fails if the file
+// already exists, so exactly one process can hold the lock at a time. A crashed
+// run could otherwise wedge every future run, so a lock whose recorded PID is no
+// longer alive is treated as stale and reclaimed.
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0); // signal 0 = liveness probe, does not actually signal
+    return true;
+  } catch (err) {
+    // ESRCH = no such process (stale). EPERM = alive but not ours (still alive).
+    return (err as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+function acquireRunLock(): void {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fd = fs.openSync(LOCK_FILE, 'wx'); // atomic exclusive create
+      fs.writeSync(
+        fd,
+        JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), args: args.join(' ') }),
+      );
+      fs.closeSync(fd);
+      return;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+      // Lock exists — is its owner still alive?
+      let holder: { pid?: number; started_at?: string; args?: string } = {};
+      try {
+        holder = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
+      } catch {
+        /* unreadable/partial lock: treat as stale below */
+      }
+      if (holder.pid && pidAlive(holder.pid)) {
+        console.error(
+          `\nAnother backfill is already running (pid ${holder.pid}, started ${holder.started_at ?? '?'}, "${holder.args ?? ''}").`,
+        );
+        console.error('Refusing to start a second concurrent run — this is what doubled week 2026-07-19.');
+        console.error(`If you are certain no backfill is running, delete ${LOCK_FILE} and retry.`);
+        process.exit(1);
+      }
+      // Stale lock (dead PID or unparseable) — remove and retry the create once.
+      console.log(`  Removing stale backfill lock (pid ${holder.pid ?? '?'} not alive).`);
+      try {
+        fs.unlinkSync(LOCK_FILE);
+      } catch {
+        /* another process may have just reclaimed it; the retry create will settle it */
+      }
+    }
+  }
+  console.error('Could not acquire backfill lock after reclaiming a stale one — aborting to be safe.');
+  process.exit(1);
+}
+
+function releaseRunLock(): void {
+  try {
+    // Only remove the lock if THIS process owns it (guards against deleting a
+    // lock a different run acquired after we reclaimed a stale one).
+    const holder = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
+    if (holder.pid === process.pid) fs.unlinkSync(LOCK_FILE);
+  } catch {
+    /* nothing to release */
+  }
 }
 
 // ── GDELT fetch ──
@@ -278,6 +369,31 @@ async function fetchGdeltDay(
   return { httpStatus: resp.status, articles };
 }
 
+// ── Single-day fetch from the GDELT raw ARCHIVE (GKG), status-reporting ──
+// Alternate path for days the DOC API's multi-hour cooldown refuses. The archive
+// (data.gdeltproject.org) is a static CDN with no rate limiter, so a day the DOC
+// API cannot deliver can still be filled. Returns the SAME {httpStatus, articles}
+// shape as fetchGdeltDay so the resumable loop treats both identically.
+//
+// COMPARABILITY: fetchGkgDay US-filters and caps to DEFAULT_DAY_CAP (250) to match
+// the DOC API's datedesc volume. This was validated head-to-head against a
+// DOC-cached day (2026-07-19): identical volume, 100% titled, and a source_type
+// distribution within 0.4pp of DOC (99.2% vs 99.6% null). A day with zero windows
+// fetched is a real archive failure -> httpStatus 0 (retried), not an empty day.
+async function fetchArchiveDay(
+  dayStart: Date,
+): Promise<{ httpStatus: number; articles: CachedArticle[] }> {
+  const dayKey = dayStart.toISOString().slice(0, 10);
+  const res = await fetchGkgDay(dayKey);
+  // The archive "answered" only if at least one window came back; otherwise the
+  // CDN was unreachable and this must be retried, not banked as a quiet day.
+  const httpStatus = res.windowsFetched > 0 ? 200 : 0;
+  console.log(
+    `      archive: ${res.windowsFetched}/${res.windowsTotal} windows, ${res.articles.length} US-politics articles (capped)`,
+  );
+  return { httpStatus, articles: res.articles };
+}
+
 // ── GDELT fetch, day-by-day, RESUMABLE (full-week coverage) ──
 // A single week-range GDELT call is capped at 250 records sorted datedesc, so it
 // only returns the newest sliver of a high-volume week. Fetching each day
@@ -331,19 +447,26 @@ async function fetchGdeltDaily(
       break;
     }
     const dayStart = new Date(`${dayKey}T00:00:00Z`);
-    // Pace requests. GDELT tolerates ~1 req/5s but applies a multi-hour burst
-    // penalty; 10s is what the pre-existing implementation used.
-    if (requested > 0) await new Promise((r) => setTimeout(r, 10000));
+    // Pace requests. The DOC API tolerates ~1 req/5s but applies a multi-hour
+    // burst penalty; 10s is what the pre-existing implementation used. The raw
+    // archive has no rate limiter AND each archive day already takes ~17s across
+    // 96 sequential window fetches, so no extra pacing is needed there.
+    if (requested > 0 && !ARCHIVE) await new Promise((r) => setTimeout(r, 10000));
     requested++;
 
-    const { httpStatus, articles } = await fetchGdeltDay(dayStart);
-    // 429 / network failure = refusal. A 200 (even a thin one) means GDELT is
-    // answering, so the cooldown is over and the counter resets.
+    const { httpStatus, articles } = ARCHIVE
+      ? await fetchArchiveDay(dayStart)
+      : await fetchGdeltDay(dayStart);
+    // 429 / network failure = refusal. A 200 (even a thin one) means the source
+    // is answering, so the cooldown is over and the counter resets.
     if (httpStatus === 200) consecutiveRefusals = 0;
     else consecutiveRefusals++;
     const result = recordDay(cache, {
       date: dayKey,
-      source: 'gdelt',
+      // Provenance: the archive path is labelled distinctly so a day's origin is
+      // auditable in the cache file, even though both paths produce the same
+      // 250-cap US-politics {url,title,date,domain} shape (validated comparable).
+      source: ARCHIVE ? 'gdelt-archive' : 'gdelt',
       http_status: httpStatus,
       count: articles.length,
       fetched_at: new Date().toISOString(),
@@ -508,22 +631,39 @@ async function scoreEventWithClaude(
 
   const systemPrompt = `You are the scoring engine for The Distraction Index v2.2. Score this event on BOTH the Constitutional Damage (A) and Distraction/Hype (B) scales. Use the exact formulas: A-score has 7 drivers (election:0.22, rule_of_law:0.18, separation:0.16, civil_rights:0.14, capture:0.14, corruption:0.10, violence:0.06) each 0-5, severity multipliers 0.8-1.3, mechanism/scope modifiers. B-score has Layer 1 hype (55%) and Layer 2 strategic (45% modulated by intentionality 0-15). Classification: D=A-B, List A if A>=25 AND D>=+10, List B if B>=25 AND D<=-10, Mixed if both>=25 AND |D|<10, Noise if A<25+no mechanism+noise indicators. Respond with ONLY raw JSON, no markdown fences.`;
 
+  const userPrompt = `Score this event:\n\nTitle: ${event.title}\nSummary: ${event.summary}\nMechanism: ${event.mechanism || 'unknown'}\nScope: ${event.scope || 'unknown'}\nPopulation: ${event.affected_population || 'unknown'}\n\nArticles:\n${articlesText}\n\nRespond with raw JSON only (no markdown, no code fences):\n{\n  "a_score": { "drivers": { "election":0,"rule_of_law":0,"separation":0,"civil_rights":0,"capture":0,"corruption":0,"violence":0 }, "severity": { "durability":1.0,"reversibility":1.0,"precedent":1.0 }, "mechanism_modifier":1.0, "scope_modifier":1.0, "base_score":0, "final_score":0 },\n  "b_score": { "layer1": { "outrage_bait":0,"meme_ability":0,"novelty":0,"media_friendliness":0 }, "layer2": { "mismatch":0,"timing":0,"narrative_pivot":0,"pattern_match":0 }, "intentionality": { "indicators":[], "total":0 }, "intent_weight":0.10, "final_score":0 },\n  "primary_list":"A",\n  "is_mixed":false,\n  "noise_flag":false,\n  "noise_reason_codes":[],\n  "noise_score":null,\n  "confidence":0.85,\n  "score_rationale":"...",\n  "action_item":"..."\n}`;
+
+  // max_tokens must cover BOTH Sonnet 5's adaptive-thinking block AND the JSON
+  // answer. The old 4096 was calibrated for a no-thinking model: on a complex
+  // high-damage event the thinking block alone consumed most of it and the JSON
+  // truncated mid-string, so JSON.parse threw "Unterminated string in JSON" and
+  // the event was silently dropped by the caller's try/catch. Because the drop
+  // correlates with event complexity, it skewed the loss toward the highest-A
+  // List-A events — the ones that matter most. 16000 leaves ample room for the
+  // ~500-800-token JSON after thinking. See the truncation guard below.
+  const SCORE_MAX_TOKENS = 16000;
+
   const resp = await anthropic.messages.create({
     model: SONNET_MODEL,
-    max_tokens: 4096,
+    max_tokens: SCORE_MAX_TOKENS,
     // Sonnet 5 REJECTS `temperature` with HTTP 400 — do not send it here.
     // (Haiku 4.5 clustering calls above still send temperature; it accepts it.)
     system: systemPrompt,
-    messages: [
-      {
-        role: 'user',
-        content: `Score this event:\n\nTitle: ${event.title}\nSummary: ${event.summary}\nMechanism: ${event.mechanism || 'unknown'}\nScope: ${event.scope || 'unknown'}\nPopulation: ${event.affected_population || 'unknown'}\n\nArticles:\n${articlesText}\n\nRespond with raw JSON only (no markdown, no code fences):\n{\n  "a_score": { "drivers": { "election":0,"rule_of_law":0,"separation":0,"civil_rights":0,"capture":0,"corruption":0,"violence":0 }, "severity": { "durability":1.0,"reversibility":1.0,"precedent":1.0 }, "mechanism_modifier":1.0, "scope_modifier":1.0, "base_score":0, "final_score":0 },\n  "b_score": { "layer1": { "outrage_bait":0,"meme_ability":0,"novelty":0,"media_friendliness":0 }, "layer2": { "mismatch":0,"timing":0,"narrative_pivot":0,"pattern_match":0 }, "intentionality": { "indicators":[], "total":0 }, "intent_weight":0.10, "final_score":0 },\n  "primary_list":"A",\n  "is_mixed":false,\n  "noise_flag":false,\n  "noise_reason_codes":[],\n  "noise_score":null,\n  "confidence":0.85,\n  "score_rationale":"...",\n  "action_item":"..."\n}`,
-      },
-    ],
+    messages: [{ role: 'user', content: userPrompt }],
   });
 
   const text = responseText(resp);
   const tokens = { input: resp.usage.input_tokens, output: resp.usage.output_tokens };
+
+  // Fail LOUD on truncation instead of letting JSON.parse throw an opaque
+  // "Unterminated string". If even 16000 tokens truncates (should not happen for
+  // a single event score), surface it as a distinct, diagnosable error so it is
+  // never mistaken for a transient failure and quietly skipped.
+  if (resp.stop_reason === 'max_tokens') {
+    throw new Error(
+      `scoreEventWithClaude truncated at max_tokens=${SCORE_MAX_TOKENS} (output=${tokens.output}) — event "${event.title}" not scored`,
+    );
+  }
 
   const json = extractJson(text);
   return { result: JSON.parse(json) as any, tokens };
@@ -759,9 +899,18 @@ async function processWeek(
     source_type: classifySource(a.url, a.domain),
   }));
 
+  // ignoreDuplicates MUST be false (merge) so a URL that already exists is
+  // RETURNED with its id instead of silently dropped from .select(). On a
+  // fresh week every article is new either way, but on a REBUILD (delete +
+  // re-run) all articles already exist — the event delete only SET NULL their
+  // event_id, it did not remove the rows. With ignoreDuplicates:true the
+  // upsert returned zero rows on rebuild, urlToArticleId stayed empty, and
+  // every event linked zero sources (article_count populated but Sources list
+  // empty). Merge only touches the payload columns; event_id is not in the
+  // payload, so the explicit per-event linking step below still owns it.
   const { data: insertedArticles } = await supabase
     .from('articles')
-    .upsert(articleInserts, { onConflict: 'url', ignoreDuplicates: true })
+    .upsert(articleInserts, { onConflict: 'url', ignoreDuplicates: false })
     .select('id, url');
 
   state.total_articles += insertedArticles?.length ?? 0;
@@ -925,6 +1074,10 @@ async function main() {
   console.log(`Supabase: ${SUPABASE_URL}`);
   console.log(`Anthropic: ${ANTHROPIC_KEY ? 'configured' : 'MISSING'}`);
 
+  // Take the exclusive run lock before any live work. Dry runs touch nothing, so
+  // they do not lock. Released in the finally at the end of main().
+  if (!DRY_RUN) acquireRunLock();
+
   const state = loadState();
 
   // Determine week range
@@ -977,39 +1130,43 @@ async function main() {
     console.log('\nDry run — processing with no API calls:');
   }
 
-  // Process each week
-  for (let i = 0; i < weeks.length; i++) {
-    try {
-      await processWeek(weeks[i], i + 1, weeks.length, state);
-    } catch (err) {
-      console.error(`\nFATAL ERROR processing week ${format(weeks[i], 'yyyy-MM-dd')}:`, err);
-      state.errors.push({ week: format(weeks[i], 'yyyy-MM-dd'), error: String(err) });
-      saveState(state);
-      // Continue to next week instead of crashing
-      await new Promise((r) => setTimeout(r, 5000));
+  try {
+    // Process each week
+    for (let i = 0; i < weeks.length; i++) {
+      try {
+        await processWeek(weeks[i], i + 1, weeks.length, state);
+      } catch (err) {
+        console.error(`\nFATAL ERROR processing week ${format(weeks[i], 'yyyy-MM-dd')}:`, err);
+        state.errors.push({ week: format(weeks[i], 'yyyy-MM-dd'), error: String(err) });
+        saveState(state);
+        // Continue to next week instead of crashing
+        await new Promise((r) => setTimeout(r, 5000));
+      }
     }
+
+    // Final summary
+    console.log('\n' + '═'.repeat(60));
+    console.log('BACKFILL COMPLETE');
+    console.log(`  Total events:           ${state.total_events}`);
+    console.log(`  Total articles:         ${state.total_articles}`);
+    console.log(`  Total smokescreen pairs: ${state.total_smokescreen_pairs}`);
+    console.log(`  Total tokens:           ${(state.total_tokens.input + state.total_tokens.output).toLocaleString()}`);
+
+    // Cost estimate: Haiku ($0.80/$4 per MTok) + Sonnet ($3/$15 per MTok)
+    const haikuCost =
+      (state.total_tokens.input * 0.8 + state.total_tokens.output * 4) / 1_000_000;
+    const sonnetCost =
+      (state.total_tokens.input * 3 + state.total_tokens.output * 15) / 1_000_000;
+    console.log(`  Estimated cost:         ~$${(haikuCost + sonnetCost).toFixed(2)}`);
+
+    if (state.errors.length > 0) {
+      console.log(`  Errors:                 ${state.errors.length}`);
+      state.errors.forEach((e) => console.log(`    - ${e.week}: ${e.error.slice(0, 80)}`));
+    }
+    console.log('═'.repeat(60));
+  } finally {
+    if (!DRY_RUN) releaseRunLock();
   }
-
-  // Final summary
-  console.log('\n' + '═'.repeat(60));
-  console.log('BACKFILL COMPLETE');
-  console.log(`  Total events:           ${state.total_events}`);
-  console.log(`  Total articles:         ${state.total_articles}`);
-  console.log(`  Total smokescreen pairs: ${state.total_smokescreen_pairs}`);
-  console.log(`  Total tokens:           ${(state.total_tokens.input + state.total_tokens.output).toLocaleString()}`);
-
-  // Cost estimate: Haiku ($0.80/$4 per MTok) + Sonnet ($3/$15 per MTok)
-  const haikuCost =
-    (state.total_tokens.input * 0.8 + state.total_tokens.output * 4) / 1_000_000;
-  const sonnetCost =
-    (state.total_tokens.input * 3 + state.total_tokens.output * 15) / 1_000_000;
-  console.log(`  Estimated cost:         ~$${(haikuCost + sonnetCost).toFixed(2)}`);
-
-  if (state.errors.length > 0) {
-    console.log(`  Errors:                 ${state.errors.length}`);
-    state.errors.forEach((e) => console.log(`    - ${e.week}: ${e.error.slice(0, 80)}`));
-  }
-  console.log('═'.repeat(60));
 }
 
 main().catch((err) => {

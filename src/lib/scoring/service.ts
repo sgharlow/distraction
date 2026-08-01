@@ -47,10 +47,25 @@ export async function scoreEvent(params: {
     week_context: weekContext,
   });
 
-  // Sonnet 5's adaptive thinking shares the output budget with the answer JSON.
-  // The scoring JSON is ~600-900 tokens, but heavy thinking on a complex event
-  // could push a 4096 budget into truncating the answer. 8192 leaves headroom.
-  const response = await callSonnet(DUAL_SCORING_SYSTEM, userPrompt, 8192);
+  // Sonnet 5's adaptive thinking shares the ONE output budget with the answer
+  // JSON. Measured on the real scoring prompt: a complex high-damage event's
+  // thinking block alone consumed up to ~8058 output tokens, so the "safe-looking"
+  // 8192 left only ~130 tokens for the ~600-900-token answer — one heavy event
+  // would truncate the JSON mid-string and JSON.parse would throw opaquely,
+  // silently dropping the highest-A events (this is exactly what corrupted the
+  // 07-19 backfill week). 16000 leaves ample room after thinking.
+  const SCORE_MAX_TOKENS = 16000;
+  const response = await callSonnet(DUAL_SCORING_SYSTEM, userPrompt, SCORE_MAX_TOKENS);
+
+  // Fail LOUD on truncation instead of letting extractJSON throw an opaque
+  // "Unterminated string". A max_tokens stop on a single event score should not
+  // happen at 16000 — if it does, surface it as a distinct, diagnosable error so
+  // it is never mistaken for a transient failure and quietly skipped.
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error(
+      `scoreEvent truncated at max_tokens=${SCORE_MAX_TOKENS} (output=${response.output_tokens}) — event "${params.title}" not scored`,
+    );
+  }
 
   const result = extractJSON<ScoringResult>(response.text);
 

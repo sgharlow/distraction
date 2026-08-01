@@ -22,6 +22,11 @@ interface ClaudeResponse {
   input_tokens: number;
   output_tokens: number;
   model: string;
+  // Surfaced so callers can fail LOUD on truncation. Sonnet 5's adaptive
+  // thinking shares the output budget with the answer, so a too-small max_tokens
+  // truncates the JSON mid-string and JSON.parse throws opaquely — callers check
+  // this for `'max_tokens'` and throw a diagnosable error instead.
+  stop_reason: string | null;
 }
 
 async function callClaude(params: {
@@ -58,6 +63,7 @@ async function callClaude(params: {
     input_tokens: response.usage.input_tokens,
     output_tokens: response.usage.output_tokens,
     model,
+    stop_reason: response.stop_reason,
   };
 }
 

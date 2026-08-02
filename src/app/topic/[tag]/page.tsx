@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { TopNav } from '@/components/TopNav';
 import { DualScore } from '@/components/DualScore';
@@ -17,6 +18,9 @@ export async function generateMetadata({ params }: TopicPageProps): Promise<Meta
   const { tag } = await params;
   const decoded = decodeURIComponent(tag);
   const events = await getEventsByTopic(decoded);
+  // A tag with no events (unknown, or re-clustered away) must 404, not serve an
+  // indexable near-empty page — GSC flags those as Soft 404.
+  if (events.length === 0) notFound();
   const eventCount = events.length;
   const weekCount = new Set(events.map((e) => e.week_id)).size;
   const description = `${eventCount} event${eventCount !== 1 ? 's' : ''} tagged #${decoded} across ${weekCount} week${weekCount !== 1 ? 's' : ''} of The Distraction Index.`;
@@ -44,6 +48,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const { tag } = await params;
   const decoded = decodeURIComponent(tag);
   const events = await getEventsByTopic(decoded);
+  if (events.length === 0) notFound();
 
   // Compute aggregate stats
   const listA = events.filter((e) => e.primary_list === 'A').length;
@@ -81,20 +86,15 @@ export default async function TopicPage({ params }: TopicPageProps) {
         </div>
 
         {/* Aggregate stats */}
-        {events.length > 0 && (
-          <div className="flex gap-3 mb-4 flex-wrap">
-            <StatChip label="Damage" value={listA} color="damage" />
-            <StatChip label="Hype" value={listB} color="distraction" />
-            <StatChip label="Noise" value={listC} color="noise" />
-            <StatChip label="Avg Dmg" value={avgA.toFixed(1)} />
-            <StatChip label="Avg Hype" value={avgB.toFixed(1)} />
-          </div>
-        )}
+        <div className="flex gap-3 mb-4 flex-wrap">
+          <StatChip label="Damage" value={listA} color="damage" />
+          <StatChip label="Hype" value={listB} color="distraction" />
+          <StatChip label="Noise" value={listC} color="noise" />
+          <StatChip label="Avg Dmg" value={avgA.toFixed(1)} />
+          <StatChip label="Avg Hype" value={avgB.toFixed(1)} />
+        </div>
 
-        {events.length === 0 ? (
-          <p className="text-text-dim text-sm">No events found with this topic tag.</p>
-        ) : (
-          <div className="space-y-4">
+        <div className="space-y-4">
             {sortedWeeks.map(([weekId, weekEvents]) => {
               const weekStart = parseWeekId(weekId);
               const weekNum = getWeekNumber(weekStart);
@@ -151,7 +151,6 @@ export default async function TopicPage({ params }: TopicPageProps) {
               );
             })}
           </div>
-        )}
       </main>
     </div>
   );

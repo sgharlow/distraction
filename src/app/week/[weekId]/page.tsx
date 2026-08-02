@@ -30,7 +30,9 @@ interface WeekPageProps {
 export async function generateMetadata({ params }: WeekPageProps): Promise<Metadata> {
   const { weekId } = await params;
   const weekStart = resolveWeekParam(weekId);
-  if (!weekStart) return { title: 'Week Not Found' };
+  // notFound() here (not a fallback title) so the miss resolves before streaming
+  // starts and the response carries a real 404 (see event page).
+  if (!weekStart) notFound();
 
   const label = getWeekLabel(weekStart);
   const weekNum = getWeekNumber(weekStart);

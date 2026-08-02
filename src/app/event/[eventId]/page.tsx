@@ -32,7 +32,10 @@ interface EventPageProps {
 export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
   const { eventId } = await params;
   const event = await getEventDetail(eventId);
-  if (!event) return { title: 'Event Not Found' };
+  // notFound() here (not a fallback title) so the miss resolves before streaming
+  // starts and the response carries a real 404 — a fallback title lets the shell
+  // flush 200 first, which GSC reads as Soft 404 / stray noindex.
+  if (!event) notFound();
 
   const list = event.primary_list === 'A' ? 'Damage' : event.primary_list === 'B' ? 'Hype' : 'Noise';
   const description = `${list} event — Dmg: ${event.a_score?.toFixed(1) ?? '—'} / Hype: ${event.b_score?.toFixed(1) ?? '—'}. ${event.summary?.slice(0, 150) ?? ''}`;

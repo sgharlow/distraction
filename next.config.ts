@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
         destination: 'https://distractionindex.org/:path*',
         permanent: true,
       },
+      // Real HTTP 307 for the homepage. The page-level redirect() in a statically
+      // prerendered page compiles to 200 + meta-refresh, which GSC flags as Soft 404.
+      {
+        source: '/',
+        destination: '/week/current',
+        permanent: false,
+      },
     ];
   },
   async headers() {

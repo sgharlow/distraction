@@ -1,10 +1,22 @@
 'use client';
 
-import { useActionState } from 'react';
+import { Suspense, useActionState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from './actions';
 
+// useSearchParams() opts the subtree into client-side bailout, so it needs its own
+// Suspense boundary to prerender. This page used to inherit one from the root
+// loading.tsx, which was removed because it also let missing-entity pages stream a
+// 200 before notFound() could set a 404.
 export default function AdminLoginPage() {
+  return (
+    <Suspense>
+      <AdminLoginForm />
+    </Suspense>
+  );
+}
+
+function AdminLoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/admin';
 

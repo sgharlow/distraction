@@ -44,6 +44,13 @@ next-env.d.ts
 
 # backfill state
 scripts/.backfill-state.json
+# backfill day-fetch cache (resumable GDELT day windows; see src/lib/ingestion/day-cache.ts)
+scripts/.backfill-cache/
+# backfill exclusive run lock (prevents concurrent double-insert)
+scripts/.backfill.lock
+# backfill run logs and pre-remediation event backups (may contain event data dumps)
+scripts/.backfill-*.log
+scripts/.backfill-backup-*.json
 
 # playwright screenshots
 .playwright-mcp/

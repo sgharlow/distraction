@@ -11,7 +11,13 @@ name: distraction
 authoritative_plan: PROJECT.yaml
 
 # customer-used = live at distractionindex.org with a real public audience (59+ weeks of data,
-# newsletter subscribers, automated 4-hourly ingestion) — a FREE audience product; no revenue rung.
+# newsletter subscribers, automated DAILY ingestion) — a FREE audience product; no revenue rung.
+#
+# ⚠️ 2026-08-24: the "newsletter subscribers" clause is the weakest part of this rung. The only
+# measurement ever taken of it is Substack's June 2026 digest — 2 free subscribers, 0 post reads —
+# and no later digest exists. Site traffic has never been measured into this file at all, so the
+# rung may be overstated. Do not cite `customer-used` as audience evidence until distractionindex.org
+# traffic is recorded here. Tracked in docs/monetize-or-civic-brief.md § open measurement gaps.
 ladder: customer-used
 
 derived:
@@ -22,6 +28,7 @@ derived:
 # The Q3 sunset review (2026-07-01) flagged this repo ZOMBIE-adjacent: a live product with real
 # ongoing compute (ingestion every 4h) and NO revenue mechanism, no gate, no retire criterion.
 # This gate is the counterweight — decide what the index is FOR, on a date.
+# CLOSED 2026-08-24 — free-civic with a $25/mo ceiling; ingestion is now DAILY, not 4-hourly.
 gates:
   - id: monetize-or-civic
     metric: explicit_model_decision (premium API tier / pro subscription / deliberate free-civic with a cost cap / sunset)
@@ -29,6 +36,18 @@ gates:
     kill: "no decision by 2026-09-30 -> reduce ingestion cadence to daily + maintenance mode (cost floor)  # ratified 2026-07-01"
     owner: steve
     due: 2026-08-31
+    met: 2026-08-24
+    decision: "DELIBERATE FREE-CIVIC WITH A COST CAP — ceiling $25/mo attributable spend
+      (Anthropic API + any Supabase charge above free tier). Ratified by Steve 2026-08-24,
+      7 days ahead of the due date. Options 'premium API tier' and 'pro subscription' were
+      REFUSED, not deferred: both require billing code, and the portfolio demand-gate rule
+      bans that before one arms-length demand signal exists (market.wtp_evidence: none).
+      Implemented by taking the kill path EARLY rather than drifting into it on 09-30 —
+      ingestion cut from 4-hourly to daily in the same commit. Rationale, evidence and the
+      two open measurement gaps: docs/monetize-or-civic-brief.md (§ addendum 2026-08-24).
+      REVERSIBLE: restore the vercel.json cadence and DEFAULT_STALENESS_THRESHOLD_HOURS
+      together if site traffic turns out to justify it."
+    ceiling_breach_action: "drop to weekly ingest, or reopen the gate for sunset"
 
 # Reliability posture, added 2026-07-31 after the July 2026 outage + blog-gap investigation.
 # Recorded here because it is NOT derivable from the code: the three checks look like ordinary
@@ -42,6 +61,14 @@ ops:
     - stuck_live_week: "week left status='live' past its scheduled freeze; no retroactive week-level freeze exists, so nothing else signals it (week 2026-07-05)"
     - missing_blog: "frozen week whose cascade blog step never wrote — /api/freeze logs freeze_week() + pipeline_runs 'completed' BEFORE the cascade and swallows its errors, so this had NO signal at all for 17 weeks (67-83)"
   known_fragility:
+    - "THE CRON CADENCE AND THE STALENESS THRESHOLD ARE ONE SETTING IN TWO FILES. `vercel.json`
+      schedules /api/ingest, and `DEFAULT_STALENESS_THRESHOLD_HOURS` in src/lib/monitor/freshness.ts
+      decides when a gap becomes an alert. They were 4-hourly/10h; on 2026-08-24 they became
+      daily-at-04:00-UTC/30h together. Change one without the other and the dead-man's switch
+      breaks in a specific direction: slowing the cron past the threshold puts /api/health into a
+      PERMANENT 503 and mails an alert every single day, which trains everyone to ignore the one
+      monitor that caught the 3-week July 2026 outage. The tests do not protect you here — they
+      inject thresholdHours explicitly and never assert the default."
     - "GDELT's DOC API applies a MULTI-HOUR burst cooldown (429 + ~11s latency) after a few dozen requests — not a per-5s rate limit, despite what its 429 body advises. Pacing does not defeat it (tested at 6s and 10s); only waiting does. scripts/backfill.ts --daily is therefore resumable: each day that returns 200 with >=40 articles is banked in scripts/.backfill-cache/<week>.json (gitignored) and re-runs request only the missing days, accumulating across cooldowns. It still refuses to freeze a week under 5/7 banked days rather than bake a distorted partial snapshot. A blocked backfill is the guard working, not a bug."
     - "Backfill must NOT be given a lower-volume substitute source to get past that guard. GNews' historical range call yields ~20 articles/week vs GDELT's ~1200 (fetchGNewsForDateRange runs 2 queries x max=10), and Google News RSS has no date parameters at all so it cannot backfill. A week thin enough to need them must refuse: every frozen week is built from GDELT by the same method, and that comparability is what makes the series meaningful. A guard that passes on thin data is worse than one that refuses."
     - "articles are idempotent (url UNIQUE + upsert ignoreDuplicates) but events is a plain .insert(). Re-processing a week duplicates every event and inflates compute_week_stats off the duplicates, permanently, in a frozen snapshot. backfill.ts hard-refuses any week that already has events; do not remove that check — the day cache makes re-runs routine."

@@ -85,9 +85,15 @@ tests/                     # 29 test files (vitest) — see note above on count
 
 The pipeline is split into two separate cron jobs:
 
-1. **`/api/ingest`** (every 4h at :00) — Fetch articles from all sources, dedup, store. No Claude API calls. Completes in ~2-15s.
-2. **`/api/process`** (every 4h at :05) — Cluster unassigned articles into events (Claude Haiku), score new events (Claude Sonnet, max 2/run), run smokescreen pairing. Completes in ~30-55s.
+1. **`/api/ingest`** (daily 04:00 UTC) — Fetch articles from all sources, dedup, store. No Claude API calls. Completes in ~2-15s.
+2. **`/api/process`** (daily 04:05 UTC) — Cluster unassigned articles into events (Claude Haiku), score new events (Claude Sonnet, max 2/run), run smokescreen pairing. Completes in ~30-55s.
 3. **`/api/freeze`** (Sunday 5am UTC) — Freeze previous week, create new week snapshot.
+
+> Cadence was 4-hourly until 2026-08-24, when the `monetize-or-civic` gate was ruled free-civic
+> with a $25/mo ceiling and ingestion was cut to daily. **`DEFAULT_STALENESS_THRESHOLD_HOURS`
+> (src/lib/monitor/freshness.ts) is coupled to this schedule and moved 10 → 30 in the same
+> commit** — change one without the other and the dead-man's switch alarms every day. See
+> `PROJECT.yaml → ops.known_fragility` and `docs/monetize-or-civic-brief.md`.
 
 ## Core Data Model — Events ≠ Articles
 

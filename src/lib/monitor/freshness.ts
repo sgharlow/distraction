@@ -11,8 +11,24 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 
-/** Hours since the last article-bearing ingest before we call the pipeline stale. */
-export const DEFAULT_STALENESS_THRESHOLD_HOURS = 10;
+/**
+ * Hours since the last article-bearing ingest before we call the pipeline stale.
+ *
+ * 🔴 THIS VALUE IS COUPLED TO THE CRON CADENCE IN `vercel.json`. It was 10
+ * ("≈ 2.5 missed 4h cycles") while `/api/ingest` ran `0 * /4 * * *`. The
+ * monetize-or-civic gate (ruled 2026-08-24) cut ingestion to DAILY at 04:00
+ * UTC, which makes a healthy pipeline's age routinely exceed 10h — the old
+ * default would have put `/api/health` into a permanent 503 and mailed a
+ * dead-man's-switch alert every single day, which is how a real monitor gets
+ * muted and then ignored.
+ *
+ * 30h = one missed daily cycle (24h) + 6h grace. Tighter than the old 2.5×
+ * ratio on purpose: under daily cadence a single miss costs a whole day of
+ * data, so it deserves to alert after one, not after two and a half.
+ *
+ * ⚠️ If the cadence changes again, change this in the same commit.
+ */
+export const DEFAULT_STALENESS_THRESHOLD_HOURS = 30;
 
 export type FreshnessState = 'fresh' | 'stale' | 'error';
 
@@ -34,7 +50,7 @@ export interface FreshnessStatus {
 /**
  * Read the freshness of the ingestion pipeline from pipeline_runs.
  *
- * @param opts.thresholdHours  Staleness threshold (default 10h ≈ 2.5 missed 4h cycles).
+ * @param opts.thresholdHours  Staleness threshold (default 30h ≈ one missed daily cycle + grace).
  * @param opts.now             Injectable clock for tests (defaults to Date.now()).
  * @returns FreshnessStatus — never throws; a DB failure becomes state:'error', healthy:false.
  */

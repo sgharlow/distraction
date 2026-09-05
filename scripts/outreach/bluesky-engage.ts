@@ -185,11 +185,13 @@ function filterTargetPosts(posts: TimelinePost[]): TimelinePost[] {
 // ---------------------------------------------------------------------------
 async function fetchCurrentWeekEvents(): Promise<{ weekId: string; events: EventRow[] }> {
   // Get the most recent frozen week (has complete data)
-  const { data: weeks } = await supabase
+  const { data: weeks, error: weeksError } = await supabase
     .from('weekly_snapshots')
     .select('week_id, status')
     .order('week_id', { ascending: false })
     .limit(5);
+
+  if (weeksError) throw new Error(`weekly_snapshots query failed: ${weeksError.message}`);
 
   const frozenWeek = weeks?.find(w => w.status === 'frozen') || weeks?.[0];
   if (!frozenWeek) throw new Error('No weeks found in database');
@@ -197,12 +199,14 @@ async function fetchCurrentWeekEvents(): Promise<{ weekId: string; events: Event
   const weekId = frozenWeek.week_id;
 
   // Get scored events with tags
-  const { data: events } = await supabase
+  const { data: events, error: eventsError } = await supabase
     .from('events')
-    .select('id, title, a_score, b_score, primary_list, summary, tags')
+    .select('id, title, a_score, b_score, primary_list, summary, tags:topic_tags')
     .eq('week_id', weekId)
     .not('a_score', 'is', null)
     .order('a_score', { ascending: false });
+
+  if (eventsError) throw new Error(`events query failed for week ${weekId}: ${eventsError.message}`);
 
   if (!events || events.length === 0) {
     throw new Error(`No scored events for week ${weekId}`);

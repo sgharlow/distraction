@@ -105,10 +105,19 @@ describe('checkStuckWeeks', () => {
 
   it('FAILS CLOSED when the client throws (network/init failure)', async () => {
     throwOnBuild = true;
-    const status = await checkStuckWeeks({ now: NOW });
-    expect(status.healthy).toBe(false);
-    expect(status.state).toBe('error');
-    expect(status.detail).toContain('ECONNREFUSED');
+    vi.useFakeTimers();
+    try {
+      // ECONNREFUSED is transient, so the check retries with backoff before failing closed.
+      const pending = checkStuckWeeks({ now: NOW });
+      await vi.runAllTimersAsync();
+      const status = await pending;
+      expect(status.healthy).toBe(false);
+      expect(status.state).toBe('error');
+      expect(status.detail).toContain('ECONNREFUSED');
+      expect(mockFrom).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('ignores an unparseable week_id without crashing the whole check', async () => {

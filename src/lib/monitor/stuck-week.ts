@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { withDbRetry } from '@/lib/supabase/retry';
 
 /**
  * The freeze cron ("0 5 * * 0") runs at 05:00 UTC on the Sunday that STARTS
@@ -58,10 +59,10 @@ export async function checkStuckWeeks(opts?: {
   try {
     const supabase = createAdminClient();
 
-    const { data, error } = await supabase
-      .from('weekly_snapshots')
-      .select('week_id, status')
-      .eq('status', 'live');
+    const { data, error } = await withDbRetry(
+      () => supabase.from('weekly_snapshots').select('week_id, status').eq('status', 'live'),
+      { label: 'stuck-week:weekly_snapshots' },
+    );
 
     if (error) {
       return {

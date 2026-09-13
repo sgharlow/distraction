@@ -22,6 +22,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { withDbRetry } from '@/lib/supabase/retry';
 
 /**
  * Same schedule arithmetic as stuck-week.ts: the freeze cron ("0 5 * * 0")
@@ -74,10 +75,10 @@ export async function checkMissingBlogs(opts?: {
   try {
     const supabase = createAdminClient();
 
-    const { data: frozen, error: weeksError } = await supabase
-      .from('weekly_snapshots')
-      .select('week_id, frozen_at')
-      .eq('status', 'frozen');
+    const { data: frozen, error: weeksError } = await withDbRetry(
+      () => supabase.from('weekly_snapshots').select('week_id, frozen_at').eq('status', 'frozen'),
+      { label: 'missing-blog:weekly_snapshots' },
+    );
 
     if (weeksError) {
       return {
@@ -88,9 +89,10 @@ export async function checkMissingBlogs(opts?: {
       };
     }
 
-    const { data: blogs, error: blogsError } = await supabase
-      .from('blog_posts')
-      .select('week_id');
+    const { data: blogs, error: blogsError } = await withDbRetry(
+      () => supabase.from('blog_posts').select('week_id'),
+      { label: 'missing-blog:blog_posts' },
+    );
 
     if (blogsError) {
       return {
@@ -119,11 +121,10 @@ export async function checkMissingBlogs(opts?: {
     // Drop candidates that have no scored events (no blog is correct for them).
     const missingWeeks: string[] = [];
     for (const wk of candidates) {
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('id')
-        .eq('week_id', wk)
-        .not('primary_list', 'is', null);
+      const { data: events, error: eventsError } = await withDbRetry(
+        () => supabase.from('events').select('id').eq('week_id', wk).not('primary_list', 'is', null),
+        { label: `missing-blog:events:${wk}` },
+      );
 
       if (eventsError) {
         return {

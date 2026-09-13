@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // and is awaited, resolving to { data, error }.
 let queryResult: { data: unknown; error: unknown };
 let throwOnBuild = false;
+// When non-empty, each awaited query pops the next result (lets a test script "504 then data").
+let limitResults: Array<{ data: unknown; error: unknown }> = [];
 
 function makeBuilder() {
   const builder: Record<string, unknown> = {};
@@ -14,7 +16,7 @@ function makeBuilder() {
   builder.gt = vi.fn(chain);
   builder.order = vi.fn(chain);
   // limit() is the awaited terminal — return a thenable resolving to queryResult
-  builder.limit = vi.fn(() => Promise.resolve(queryResult));
+  builder.limit = vi.fn(() => Promise.resolve(limitResults.length ? limitResults.shift()! : queryResult));
   return builder;
 }
 
@@ -37,6 +39,7 @@ describe('checkPipelineFreshness', () => {
     vi.clearAllMocks();
     throwOnBuild = false;
     queryResult = { data: [], error: null };
+    limitResults = [];
   });
 
   it('reports fresh when a recent article-bearing ingest exists', async () => {
@@ -72,10 +75,59 @@ describe('checkPipelineFreshness', () => {
 
   it('FAILS CLOSED when the client throws (network/init failure)', async () => {
     throwOnBuild = true;
-    const status = await checkPipelineFreshness({ now: NOW });
-    expect(status.healthy).toBe(false);
-    expect(status.state).toBe('error');
-    expect(status.detail).toContain('ECONNREFUSED');
+    vi.useFakeTimers();
+    try {
+      // ECONNREFUSED is transient, so the check retries with backoff before failing closed.
+      const pending = checkPipelineFreshness({ now: NOW });
+      await vi.runAllTimersAsync();
+      const status = await pending;
+      expect(status.healthy).toBe(false);
+      expect(status.state).toBe('error');
+      expect(status.detail).toContain('ECONNREFUSED');
+      expect(mockFrom).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('retries a transient Gateway Timeout (the 2026-09-12 signature) and reports fresh when the retry succeeds', async () => {
+    // First call: Supabase gateway 504 as supabase-js surfaces it. Second call: real data.
+    limitResults = [
+      { data: null, error: { message: 'Gateway Timeout', code: '504' } },
+      { data: [{ completed_at: hoursAgo(2), started_at: hoursAgo(2), articles_fetched: 503 }], error: null },
+    ];
+    vi.useFakeTimers();
+    try {
+      const pending = checkPipelineFreshness({ now: NOW });
+      await vi.runAllTimersAsync();
+      const status = await pending;
+      expect(status.healthy).toBe(true);
+      expect(status.state).toBe('fresh');
+      expect(status.articlesLastRun).toBe(503);
+      expect(mockFrom).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still FAILS CLOSED when the transient error persists through every retry', async () => {
+    limitResults = [
+      { data: null, error: { message: 'Gateway Timeout', code: '504' } },
+      { data: null, error: { message: 'Gateway Timeout', code: '504' } },
+      { data: null, error: { message: 'Gateway Timeout', code: '504' } },
+    ];
+    vi.useFakeTimers();
+    try {
+      const pending = checkPipelineFreshness({ now: NOW });
+      await vi.runAllTimersAsync();
+      const status = await pending;
+      expect(status.healthy).toBe(false);
+      expect(status.state).toBe('error');
+      expect(status.detail).toContain('Gateway Timeout');
+      expect(mockFrom).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports stale (not error) when no successful ingest row exists at all', async () => {

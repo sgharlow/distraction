@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { withDbRetry } from '@/lib/supabase/retry';
 import { fetchGdeltRecent } from './gdelt';
 import { fetchGNewsRecent } from './gnews';
 import { fetchGoogleNewsRecent } from './google-news';
@@ -48,12 +49,14 @@ export async function runIngestPipeline(): Promise<PipelineResult> {
     .eq('status', 'running')
     .lt('started_at', new Date(Date.now() - 120_000).toISOString());
 
-  // 1. Create pipeline run record
-  const { data: run, error: runError } = await supabase
-    .from('pipeline_runs')
-    .insert({ run_type: 'ingest', status: 'running' })
-    .select()
-    .single();
+  // 1. Create pipeline run record.
+  //    Retried on transient gateway errors: on 2026-09-12 a single 504 here
+  //    threw before any fetch ran, and because the cron does not re-run, the
+  //    entire day's ingest was lost. Real errors still throw after the retries.
+  const { data: run, error: runError } = await withDbRetry(
+    () => supabase.from('pipeline_runs').insert({ run_type: 'ingest', status: 'running' }).select().single(),
+    { label: 'ingest:create-run' },
+  );
   if (!run?.id) {
     throw new Error(`Failed to create ingest pipeline run: ${runError?.message || 'no data returned'}`);
   }
@@ -189,12 +192,11 @@ export async function runProcessPipeline(): Promise<PipelineResult> {
   const timeLeft = () => PIPELINE_TIMEOUT_MS - (Date.now() - startTime);
   const hasTime = () => timeLeft() > 5000;
 
-  // 1. Create pipeline run record
-  const { data: run, error: runError } = await supabase
-    .from('pipeline_runs')
-    .insert({ run_type: 'process', status: 'running' })
-    .select()
-    .single();
+  // 1. Create pipeline run record (retried on transient gateway errors — see ingest above)
+  const { data: run, error: runError } = await withDbRetry(
+    () => supabase.from('pipeline_runs').insert({ run_type: 'process', status: 'running' }).select().single(),
+    { label: 'process:create-run' },
+  );
   if (!run?.id) {
     throw new Error(`Failed to create process pipeline run: ${runError?.message || 'no data returned'}`);
   }

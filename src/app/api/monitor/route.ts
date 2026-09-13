@@ -5,7 +5,10 @@ import { checkMissingBlogs } from '@/lib/monitor/missing-blog';
 import { sendHealthAlert } from '@/lib/monitor/alert';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+// 60s (was 30): each check may now retry a transient DB error twice (~4s of
+// backoff) on top of gateway latency (a 504 took ~13s on 2026-09-12). A kill
+// at maxDuration would mean NO alert — the one outcome this cron must avoid.
+export const maxDuration = 60;
 
 /**
  * GET /api/monitor — the dead-man's-switch cron (CRON_SECRET-authed).

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { withDbRetry } from '@/lib/supabase/retry';
 
 /**
  * Hours since the last article-bearing ingest before we call the pipeline stale.
@@ -68,14 +69,21 @@ export async function checkPipelineFreshness(opts?: {
     // status='completed' AND articles_fetched > 0 — the fail-closed gate in the
     // pipeline marks all-sources-empty runs as 'failed', so a run that merely
     // "finished" is not proof the data is fresh.
-    const { data, error } = await supabase
-      .from('pipeline_runs')
-      .select('completed_at, started_at, articles_fetched')
-      .eq('run_type', 'ingest')
-      .eq('status', 'completed')
-      .gt('articles_fetched', 0)
-      .order('completed_at', { ascending: false, nullsFirst: false })
-      .limit(1);
+    // Retried on transient gateway errors (2026-09-12: a single 504 at 12:00Z
+    // reported "DB unreachable" for a database that answered the next request).
+    // A paused project or a real error is NOT retried and still fails closed.
+    const { data, error } = await withDbRetry(
+      () =>
+        supabase
+          .from('pipeline_runs')
+          .select('completed_at, started_at, articles_fetched')
+          .eq('run_type', 'ingest')
+          .eq('status', 'completed')
+          .gt('articles_fetched', 0)
+          .order('completed_at', { ascending: false, nullsFirst: false })
+          .limit(1),
+      { label: 'freshness:pipeline_runs' },
+    );
 
     // FAIL CLOSED: a DB error is the paused-Supabase signature. Alert, don't pass.
     if (error) {

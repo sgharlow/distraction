@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextRequest } from 'next/server';
 
 // ── Mock google-indexing ──
 const mockNotifyBatch = vi.fn();
@@ -31,7 +32,7 @@ vi.mock('next/server', () => ({
   },
 }));
 
-function createRequest(body?: unknown, secret?: string) {
+function createRequest(body?: unknown, secret?: string): NextRequest {
   const { NextRequest } = require('next/server');
   const headers: Record<string, string> = {};
   if (secret) headers['authorization'] = `Bearer ${secret}`;
@@ -43,7 +44,7 @@ function createRequest(body?: unknown, secret?: string) {
 }
 
 describe('POST /api/index-urls', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

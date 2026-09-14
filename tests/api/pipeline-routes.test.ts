@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextRequest } from 'next/server';
 
 // ── Mock pipeline functions ──
 const mockRunIngestPipeline = vi.fn();
@@ -55,19 +56,19 @@ vi.mock('next/server', () => ({
 }));
 
 // ── Helper to create mock request ──
-function createRequest(url: string, secret?: string) {
+function createRequest(url: string, secret?: string): NextRequest {
   const headers = new Map<string, string>();
   if (secret) headers.set('authorization', `Bearer ${secret}`);
   return {
     url,
     headers: { get: (key: string) => headers.get(key) ?? null },
     json: async () => ({}),
-  };
+  } as unknown as NextRequest;
 }
 
 // ── Ingest route tests ──
 describe('GET /api/ingest', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -121,7 +122,7 @@ describe('GET /api/ingest', () => {
 
 // ── Process route tests ──
 describe('GET /api/process', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -167,7 +168,7 @@ describe('GET /api/process', () => {
 
 // ── Freeze route tests ──
 describe('GET /api/freeze', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -223,7 +224,7 @@ describe('GET /api/freeze', () => {
 
 // ── Score route tests ──
 describe('POST /api/score', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

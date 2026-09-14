@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextRequest } from 'next/server';
 
 // ── Mock the data layer ──
 const mockGetAllWeekSnapshots = vi.fn();
@@ -24,6 +25,9 @@ vi.mock('next/server', () => ({
 }));
 
 // ── Sample data fixtures ──
+// Both routes only forward the request to checkApiRateLimit, which is null-safe on headers.
+const mockRequest = {} as NextRequest;
+
 const sampleSnapshot = {
   id: 'snap-001',
   week_id: '2026-02-08',
@@ -104,7 +108,7 @@ const sampleSmokescreenPair = {
 // ── Tests ──
 
 describe('GET /api/v1/weeks', () => {
-  let handler: () => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -115,7 +119,7 @@ describe('GET /api/v1/weeks', () => {
   it('returns an array of weeks with count', async () => {
     mockGetAllWeekSnapshots.mockResolvedValue([sampleSnapshot, frozenSnapshot]);
 
-    const res = await handler();
+    const res = await handler(mockRequest);
     const body = await res.json() as { count: number; weeks: unknown[] };
 
     expect(res.status).toBe(200);
@@ -126,7 +130,7 @@ describe('GET /api/v1/weeks', () => {
   it('returns correct week shape for each item', async () => {
     mockGetAllWeekSnapshots.mockResolvedValue([sampleSnapshot]);
 
-    const res = await handler();
+    const res = await handler(mockRequest);
     const body = await res.json() as { weeks: Record<string, unknown>[] };
     const week = body.weeks[0];
 
@@ -150,7 +154,7 @@ describe('GET /api/v1/weeks', () => {
   it('does not leak internal fields (id, weekly_summary, primary_doc_count)', async () => {
     mockGetAllWeekSnapshots.mockResolvedValue([sampleSnapshot]);
 
-    const res = await handler();
+    const res = await handler(mockRequest);
     const body = await res.json() as { weeks: Record<string, unknown>[] };
     const week = body.weeks[0];
 
@@ -162,7 +166,7 @@ describe('GET /api/v1/weeks', () => {
   it('returns empty array when no weeks exist', async () => {
     mockGetAllWeekSnapshots.mockResolvedValue([]);
 
-    const res = await handler();
+    const res = await handler(mockRequest);
     const body = await res.json() as { count: number; weeks: unknown[] };
 
     expect(body.count).toBe(0);
@@ -172,7 +176,7 @@ describe('GET /api/v1/weeks', () => {
   it('includes frozen_at for frozen weeks', async () => {
     mockGetAllWeekSnapshots.mockResolvedValue([frozenSnapshot]);
 
-    const res = await handler();
+    const res = await handler(mockRequest);
     const body = await res.json() as { weeks: Record<string, unknown>[] };
 
     expect(body.weeks[0].status).toBe('frozen');
@@ -181,7 +185,7 @@ describe('GET /api/v1/weeks', () => {
 });
 
 describe('GET /api/v1/weeks/:weekId/events', () => {
-  let handler: (req: unknown, ctx: { params: Promise<{ weekId: string }> }) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest, ctx: { params: Promise<{ weekId: string }> }) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -201,7 +205,7 @@ describe('GET /api/v1/weeks/:weekId/events', () => {
     });
 
     const res = await handler(
-      {},
+      mockRequest,
       { params: Promise.resolve({ weekId: '2026-02-08' }) },
     );
     const body = await res.json() as {
@@ -229,7 +233,7 @@ describe('GET /api/v1/weeks/:weekId/events', () => {
     });
 
     const res = await handler(
-      {},
+      mockRequest,
       { params: Promise.resolve({ weekId: '2026-02-08' }) },
     );
     const body = await res.json() as { events: { A: Record<string, unknown>[] } };
@@ -256,7 +260,7 @@ describe('GET /api/v1/weeks/:weekId/events', () => {
     });
 
     const res = await handler(
-      {},
+      mockRequest,
       { params: Promise.resolve({ weekId: '2026-02-08' }) },
     );
     const body = await res.json() as { smokescreen_pairs: Record<string, unknown>[] };
@@ -276,7 +280,7 @@ describe('GET /api/v1/weeks/:weekId/events', () => {
     mockGetWeekData.mockResolvedValue(null);
 
     const res = await handler(
-      {},
+      mockRequest,
       { params: Promise.resolve({ weekId: '2099-01-01' }) },
     );
     const body = await res.json() as { error: string; week_id: string };
@@ -294,7 +298,7 @@ describe('GET /api/v1/weeks/:weekId/events', () => {
     });
 
     const res = await handler(
-      {},
+      mockRequest,
       { params: Promise.resolve({ weekId: '2026-02-08' }) },
     );
     const body = await res.json() as { total_events: number; events: { A: unknown[]; B: unknown[]; C: unknown[] } };

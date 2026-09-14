@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextRequest } from 'next/server';
 import type { FreshnessStatus } from '@/lib/monitor/freshness';
 import type { StuckWeekStatus } from '@/lib/monitor/stuck-week';
 import type { MissingBlogStatus } from '@/lib/monitor/missing-blog';
@@ -32,10 +33,10 @@ vi.mock('next/server', () => ({
   NextRequest: class {},
 }));
 
-function createRequest(secret?: string) {
+function createRequest(secret?: string): NextRequest {
   const headers = new Map<string, string>();
   if (secret) headers.set('authorization', `Bearer ${secret}`);
-  return { headers: { get: (k: string) => headers.get(k) ?? null } };
+  return { headers: { get: (k: string) => headers.get(k) ?? null } } as unknown as NextRequest;
 }
 
 const FRESH: FreshnessStatus = {
@@ -60,7 +61,7 @@ const BLOGS_BAD: MissingBlogStatus = {
 };
 
 describe('GET /api/monitor', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

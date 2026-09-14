@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextRequest } from 'next/server';
 
 // ── Mock admin auth ──
 const mockGetAdminUser = vi.fn();
@@ -53,14 +54,14 @@ vi.mock('next/server', () => ({
 }));
 
 // ── Helpers ──
-function createAdminRequest(url: string, body?: unknown) {
+function createAdminRequest(url: string, body?: unknown): NextRequest {
   const req = {
     url,
     nextUrl: { searchParams: new URL(url, 'http://localhost').searchParams },
     headers: { get: () => null },
     json: async () => body ?? {},
   };
-  return req;
+  return req as unknown as NextRequest;
 }
 
 const mockAdminUser = { id: 'admin-001', email: 'admin@test.com' };
@@ -86,7 +87,7 @@ function mockSelectChain(data: unknown, error: unknown = null) {
 // GET /api/admin/events
 // ═══════════════════════════════════════════════════════════
 describe('GET /api/admin/events', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -137,7 +138,7 @@ describe('GET /api/admin/events', () => {
 // PATCH /api/admin/events (bulk actions)
 // ═══════════════════════════════════════════════════════════
 describe('PATCH /api/admin/events', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -204,7 +205,7 @@ describe('PATCH /api/admin/events', () => {
 // ═══════════════════════════════════════════════════════════
 describe('GET /api/admin/events/[eventId]', () => {
   let handler: (
-    req: unknown,
+    req: NextRequest,
     ctx: { params: Promise<{ eventId: string }> },
   ) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -291,7 +292,7 @@ describe('GET /api/admin/events/[eventId]', () => {
 // GET /api/admin/weeks
 // ═══════════════════════════════════════════════════════════
 describe('GET /api/admin/weeks', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -365,7 +366,7 @@ describe('GET /api/admin/weeks', () => {
 // GET /api/admin/pipeline
 // ═══════════════════════════════════════════════════════════
 describe('GET /api/admin/pipeline', () => {
-  let handler: (req: unknown) => Promise<{ status: number; json: () => Promise<unknown> }>;
+  let handler: (req: NextRequest) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

@@ -1,19 +1,34 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasDatabase } from '@/lib/supabase/env';
 
 export const revalidate = 3600; // revalidate every hour
 
-export async function GET() {
+type NewsEvent = {
+  id: string;
+  title: string;
+  event_date: string | null;
+  created_at: string;
+  topic_tags: string[] | null;
+};
+
+// Build-safe: without a database (a preview build — see src/lib/supabase/env.ts) the sitemap is
+// VALID AND EMPTY, never a build failure. tests/api/news-sitemap.test.ts pins both branches.
+async function loadRecentEvents(cutoff: string): Promise<NewsEvent[]> {
+  if (!hasDatabase()) return [];
   const supabase = createAdminClient();
-
-  // Google News sitemaps should only include content from the last 48 hours
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-
   const { data: events } = await supabase
     .from('events')
     .select('id, title, event_date, created_at, topic_tags')
     .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(100);
+  return (events ?? []) as NewsEvent[];
+}
+
+export async function GET() {
+  // Google News sitemaps should only include content from the last 48 hours
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const events = await loadRecentEvents(cutoff);
 
   const items = (events ?? [])
     .map((e) => {

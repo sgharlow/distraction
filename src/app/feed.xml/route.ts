@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasDatabase } from '@/lib/supabase/env';
 
 export const revalidate = 3600;
 
@@ -13,12 +14,8 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Build-safe by design. Every Vercel env var on this project is Production-scoped, so a preview
-// build has no Supabase URL or key — and `next build` prerenders this route (revalidate = 3600).
-// Without a database the feed is VALID AND EMPTY, never a build failure: until 2026-09-25 every
-// preview deployment died here ("supabaseUrl is required"), which put a red Vercel check on every
-// PR, Dependabot's included. Production, which has the env, is unchanged. tests/api/feed.test.ts
-// pins both branches.
+// Build-safe: without a database (a preview build — see src/lib/supabase/env.ts) the feed is
+// VALID AND EMPTY, never a build failure. tests/api/feed.test.ts pins both branches.
 type FeedPost = {
   slug: string;
   title: string;
@@ -27,10 +24,6 @@ type FeedPost = {
   updated_at: string;
   week_id: string;
 };
-
-function hasDatabase(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
 
 async function loadPosts(): Promise<FeedPost[]> {
   if (!hasDatabase()) return [];

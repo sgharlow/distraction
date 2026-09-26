@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasDatabase } from '@/lib/supabase/env';
 
 export const revalidate = 3600;
 
@@ -13,14 +14,30 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export async function GET() {
-  const supabase = createAdminClient();
+// Build-safe: without a database (a preview build — see src/lib/supabase/env.ts) the feed is
+// VALID AND EMPTY, never a build failure. tests/api/feed.test.ts pins both branches.
+type FeedPost = {
+  slug: string;
+  title: string;
+  meta_description: string | null;
+  published_at: string;
+  updated_at: string;
+  week_id: string;
+};
 
+async function loadPosts(): Promise<FeedPost[]> {
+  if (!hasDatabase()) return [];
+  const supabase = createAdminClient();
   const { data: posts } = await supabase
     .from('blog_posts')
     .select('slug, title, meta_description, published_at, updated_at, week_id')
     .order('published_at', { ascending: false })
     .limit(50);
+  return (posts ?? []) as FeedPost[];
+}
+
+export async function GET() {
+  const posts = await loadPosts();
 
   const items = (posts ?? [])
     .map((p) => `  <entry>

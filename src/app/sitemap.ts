@@ -1,11 +1,17 @@
 import type { MetadataRoute } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasDatabase } from '@/lib/supabase/env';
 
 const BASE_URL = 'https://distractionindex.org';
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const supabase = createAdminClient();
+type WeekRow = { week_id: string; status: string; frozen_at: string | null; created_at: string };
+type PostRow = { slug: string; published_at: string; updated_at: string | null };
 
+// Build-safe: without a database (a preview build — see src/lib/supabase/env.ts) the sitemap is
+// the static pages only, never a build failure. tests/api/sitemap.test.ts pins both branches.
+async function loadIndexable(): Promise<{ weeks: WeekRow[]; blogPosts: PostRow[] }> {
+  if (!hasDatabase()) return { weeks: [], blogPosts: [] };
+  const supabase = createAdminClient();
   const [{ data: weeks }, { data: blogPosts }] = await Promise.all([
     supabase
       .from('weekly_snapshots')
@@ -16,6 +22,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select('slug, published_at, updated_at')
       .order('published_at', { ascending: false }),
   ]);
+  return { weeks: (weeks ?? []) as WeekRow[], blogPosts: (blogPosts ?? []) as PostRow[] };
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const { weeks, blogPosts } = await loadIndexable();
 
   // Static pages — only substantive, unique-content pages
   // Excludes / (redirects to /week/current) and /search (thin query page)

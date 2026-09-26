@@ -13,14 +13,38 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export async function GET() {
-  const supabase = createAdminClient();
+// Build-safe by design. Every Vercel env var on this project is Production-scoped, so a preview
+// build has no Supabase URL or key — and `next build` prerenders this route (revalidate = 3600).
+// Without a database the feed is VALID AND EMPTY, never a build failure: until 2026-09-25 every
+// preview deployment died here ("supabaseUrl is required"), which put a red Vercel check on every
+// PR, Dependabot's included. Production, which has the env, is unchanged. tests/api/feed.test.ts
+// pins both branches.
+type FeedPost = {
+  slug: string;
+  title: string;
+  meta_description: string | null;
+  published_at: string;
+  updated_at: string;
+  week_id: string;
+};
 
+function hasDatabase(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function loadPosts(): Promise<FeedPost[]> {
+  if (!hasDatabase()) return [];
+  const supabase = createAdminClient();
   const { data: posts } = await supabase
     .from('blog_posts')
     .select('slug, title, meta_description, published_at, updated_at, week_id')
     .order('published_at', { ascending: false })
     .limit(50);
+  return (posts ?? []) as FeedPost[];
+}
+
+export async function GET() {
+  const posts = await loadPosts();
 
   const items = (posts ?? [])
     .map((p) => `  <entry>

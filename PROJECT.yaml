@@ -37,6 +37,7 @@ gates:
     owner: steve
     due: 2026-08-31
     met: 2026-08-24
+    cost_read_2026_09_26: "Supabase Pro first invoice $26.53/mo on the SHARED project qwmiqowetejzroxckibu (sharing apps by env ref: distraction and scopeshield, the latter archived 2026-07-24). Steve ruled 2026-09-26 (/daily-priority AskUserQuestion): split evenly -> $13.27/mo attributable to distraction, under the $25 cap on the Supabase line alone; the Anthropic API share was not read in this pass. Source: __project-docs/saas-spend-audit-2026-09-26.md."
     decision: "DELIBERATE FREE-CIVIC WITH A COST CAP — ceiling $25/mo attributable spend
       (Anthropic API + any Supabase charge above free tier). Ratified by Steve 2026-08-24,
       7 days ahead of the due date. Options 'premium API tier' and 'pro subscription' were

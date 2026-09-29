@@ -25,6 +25,7 @@
  */
 import { execSync } from 'child_process';
 import { resolve } from 'path';
+import { finishRun } from './post-outcome';
 
 const SCRIPT_DIR = resolve(__dirname);
 
@@ -67,11 +68,13 @@ async function main() {
   console.log(`Channels: ${selectedChannels.join(', ')}`);
   console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
 
+  const failures: string[] = [];
   for (const channel of selectedChannels) {
     const config = CHANNELS[channel];
     if (!config) {
       console.error(`Unknown channel: ${channel}`);
       console.log(`Available: ${Object.keys(CHANNELS).join(', ')}`);
+      failures.push(`${channel}: unknown channel`);
       continue;
     }
 
@@ -94,11 +97,14 @@ async function main() {
       console.log(`\n[${channel}] Complete.`);
     } catch (err: any) {
       console.error(`\n[${channel}] Failed: ${err.message}`);
+      failures.push(`${channel}: ${err.message}`);
       // Continue with next channel
     }
   }
 
   console.log('\n=== All channels processed ===');
+  // A failed channel must turn the run red (it used to exit 0 regardless).
+  process.exitCode = finishRun('run-all', failures);
 }
 
 main().catch(err => {

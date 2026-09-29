@@ -26,7 +26,39 @@ describe('NewsletterSignup', () => {
     fireEvent.click(screen.getByText('SUBSCRIBE'));
 
     await waitFor(() => {
-      expect(screen.getByText(/you're in/i)).toBeInTheDocument();
+      expect(screen.getByText(/check your inbox/i)).toBeInTheDocument();
+    });
+  });
+
+  it('tells the reader to confirm by email (double opt-in)', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      json: async () => ({ status: 'subscribed', confirmation: 'sent' }),
+    } as Response);
+
+    render(<NewsletterSignup />);
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.click(screen.getByText('SUBSCRIBE'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/confirmation link/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows the error state when the confirmation email could not be sent (so the reader retries)', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      json: async () => ({ status: 'subscribed', confirmation: 'failed' }),
+    } as Response);
+
+    render(<NewsletterSignup />);
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.click(screen.getByText('SUBSCRIBE'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Something went wrong. Please try again.')).toBeInTheDocument();
     });
   });
 
@@ -93,7 +125,7 @@ describe('NewsletterSignup', () => {
 
     resolvePromise!({ json: async () => ({ status: 'subscribed' }) } as Response);
     await waitFor(() => {
-      expect(screen.getByText(/you're in/i)).toBeInTheDocument();
+      expect(screen.getByText(/check your inbox/i)).toBeInTheDocument();
     });
   });
 });

@@ -24,6 +24,7 @@ import { resolve } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { generatePost, type PostSlot } from './content-variants';
 import { postToTwitter } from './twitter-post';
+import { evaluatePostOutcome, finishRun, type PostOutcome } from './post-outcome';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -33,6 +34,14 @@ const THREADS_SESSION_DIR = resolve(__dirname, '.threads-session');
 const SCREENSHOT_DIR = resolve(__dirname, 'debug-screenshots');
 const THREADS_MAX_RETRIES = 3;
 const THREADS_RETRY_DELAY_MS = 5000;
+
+// Every failure in this process run, one line each. main() turns a non-empty
+// list into a non-zero exit code so Task Scheduler's LastTaskResult is honest.
+const runFailures: string[] = [];
+
+function recordOutcome(slot: PostSlot, outcome: PostOutcome): void {
+  for (const f of outcome.failed) runFailures.push(`${slot}: ${f}`);
+}
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -620,7 +629,7 @@ async function withTimeout<T>(
   ]);
 }
 
-async function executePost(slot: PostSlot): Promise<void> {
+async function executePost(slot: PostSlot): Promise<PostOutcome> {
   console.log(`\n[${new Date().toISOString()}] Generating ${slot} post...`);
 
   const post = await generatePost(slot);
@@ -685,7 +694,9 @@ async function executePost(slot: PostSlot): Promise<void> {
   } catch (e: any) {
     twitter = { success: false, error: e.message.substring(0, 200) };
   }
-  console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'FAILED: ' + twitter.error}`);
+  // X is OPTIONAL (API credits depleted since 2026-09): still attempted, but a
+  // failure is logged as a non-fatal skip and can never fail the run.
+  console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'SKIPPED (non-fatal): ' + twitter.error}`);
 
   // --- Update the saved record with Playwright platform results ---
   updateLastHistoryRecord(slot, { linkedin, twitter });
@@ -693,6 +704,12 @@ async function executePost(slot: PostSlot): Promise<void> {
   const platforms = [bsky, masto, threads, linkedin, twitter];
   const succeeded = platforms.filter(p => p.success).length;
   console.log(`  Result: ${succeeded}/${platforms.length} platforms succeeded`);
+
+  const outcome = evaluatePostOutcome({ bluesky: bsky, mastodon: masto, threads, linkedin, twitter });
+  for (const w of outcome.warnings) console.log(`  WARNING: ${w}`);
+  for (const f of outcome.failed) console.error(`  REQUIRED PLATFORM FAILED: ${f}`);
+  recordOutcome(slot, outcome);
+  return outcome;
 }
 
 async function runSchedulerLoop(): Promise<void> {
@@ -725,6 +742,7 @@ async function runSchedulerLoop(): Promise<void> {
           saveSchedule(schedule);
         } catch (err: any) {
           console.error(`  Error in ${slot} post:`, err.message);
+          runFailures.push(`${slot}: threw: ${err.message}`);
         }
       }
     }
@@ -823,6 +841,7 @@ async function catchupMissedSlots(): Promise<void> {
       await forcePost(slot, false);
     } catch (err: any) {
       console.error(`  [Catch-up] Error posting ${slot}:`, err.message);
+      runFailures.push(`${slot}: catch-up threw: ${err.message}`);
     }
     // Brief pause between catch-up posts to avoid rate limits
     if (missedSlots.indexOf(slot) < missedSlots.length - 1) {
@@ -906,17 +925,24 @@ async function main() {
             await new Promise(r => setTimeout(r, 15_000));
           } catch (err: any) {
             console.error(`  [Auto catch-up] Error: ${err.message}`);
+            runFailures.push(`${slotOrder[i]}: auto catch-up threw: ${err.message}`);
           }
         }
       }
     }
-    await forcePost(slot, skipDedup);
-    process.exit(0);
+    try {
+      await forcePost(slot, skipDedup);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`  Error posting ${slot}:`, msg);
+      runFailures.push(`${slot}: threw: ${msg}`);
+    }
+    process.exit(finishRun(`scheduler --post ${slot}`, runFailures));
   } else {
     await runSchedulerLoop();
     return;
   }
-  process.exit(0);
+  process.exit(finishRun('scheduler', runFailures));
 }
 
 main().catch(err => {

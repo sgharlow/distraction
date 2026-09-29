@@ -9,11 +9,13 @@
 import type { FreshnessStatus } from './freshness';
 import type { StuckWeekStatus } from './stuck-week';
 import type { MissingBlogStatus } from './missing-blog';
+import type { SocialPostingStatus } from './social-posting';
 
 export interface HealthReport {
   freshness: FreshnessStatus;
   stuck: StuckWeekStatus | null;
   blogs?: MissingBlogStatus | null;
+  social?: SocialPostingStatus | null;
 }
 
 export interface AlertResult {
@@ -50,7 +52,7 @@ export async function sendHealthAlert(
   if (!to) return { sent: false, skippedReason: 'ALERT_EMAIL not set' };
 
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://distractionindex.org';
-  const { freshness, stuck, blogs } = report;
+  const { freshness, stuck, blogs, social } = report;
   const level = severity(report);
 
   // Subject names the most severe firing condition, so it reads correctly when
@@ -60,6 +62,10 @@ export async function sendHealthAlert(
     subject = `⚠️ Distraction Index pipeline ${freshness.state.toUpperCase()} — ingest not landing data`;
   } else if (stuck && stuck.state !== 'ok') {
     subject = `⚠️ Distraction Index — week freeze missed (${stuck.stuckWeeks.join(', ')})`;
+  } else if (blogs && blogs.state !== 'ok') {
+    subject = `⚠️ Distraction Index — blog post missing (${blogs.missingWeeks.join(', ')})`;
+  } else if (social && social.state !== 'ok') {
+    subject = `⚠️ Distraction Index — social posting stopped (${social.ageHours == null ? social.state : `last Bluesky post ${social.ageHours}h ago`})`;
   } else {
     subject = `⚠️ Distraction Index — blog post missing (${blogs?.missingWeeks.join(', ') ?? 'unknown week'})`;
   }
@@ -87,6 +93,19 @@ export async function sendHealthAlert(
     lines.push('', '── Blog posts ──');
     lines.push(`State:            ${blogs.state}`);
     lines.push(`Detail:           ${blogs.detail}`);
+  }
+
+  // Social-posting section (only when there is something to say).
+  if (social && social.state !== 'ok') {
+    lines.push('', '── Social posting ──');
+    lines.push(`State:            ${social.state}`);
+    lines.push(`Detail:           ${social.detail}`);
+    lines.push(`Last post:        ${social.lastPostAt ?? 'none found'} (${social.handle})`);
+    lines.push(
+      'Posts come from the DistractionIndex-Morning/Midday/Evening tasks on the PC.',
+      'Their LastTaskResult is NOT proof they ran: check scripts/outreach/scheduler.log',
+      'is being appended, and that the task action actually starts tsx in the repo dir.',
+    );
   }
 
   lines.push(

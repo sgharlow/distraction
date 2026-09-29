@@ -3,6 +3,7 @@ import { sendHealthAlert, type HealthReport } from '@/lib/monitor/alert';
 import type { FreshnessStatus } from '@/lib/monitor/freshness';
 import type { StuckWeekStatus } from '@/lib/monitor/stuck-week';
 import type { MissingBlogStatus } from '@/lib/monitor/missing-blog';
+import type { SocialPostingStatus } from '@/lib/monitor/social-posting';
 
 const STALE: FreshnessStatus = {
   healthy: false, state: 'stale', lastSuccessfulIngestAt: '2026-07-09T00:00:00Z',
@@ -34,6 +35,16 @@ const BLOGS_OK: MissingBlogStatus = {
 const BLOGS_BAD: MissingBlogStatus = {
   healthy: false, state: 'missing', missingWeeks: ['2026-07-12'],
   detail: '1 frozen week(s) with scored events have NO blog post: 2026-07-12.',
+};
+
+const SOCIAL_STALE: SocialPostingStatus = {
+  healthy: false, state: 'stale', handle: 'example.bsky.social', lastPostAt: '2026-09-05T19:30:05Z',
+  ageHours: 544, thresholdHours: 36,
+  detail: 'No Bluesky post from example.bsky.social in 544h (threshold 36h).',
+};
+const SOCIAL_OK: SocialPostingStatus = {
+  healthy: true, state: 'ok', handle: 'example.bsky.social', lastPostAt: '2026-09-28T01:00:00Z',
+  ageHours: 11, thresholdHours: 36, detail: 'Last Bluesky post 11h ago.',
 };
 
 const staleReport: HealthReport = { freshness: STALE, stuck: STUCK_OK };
@@ -113,6 +124,32 @@ describe('sendHealthAlert', () => {
     const payload = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body);
     expect(payload.text).not.toContain('Blog posts');
     // ...and the ingest problem still owns the subject.
+    expect(payload.subject).toContain('STALE');
+  });
+
+  it('sends a social-posting-stopped subject and section when only social posting is stale', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const res = await sendHealthAlert(
+      { freshness: FRESH, stuck: STUCK_OK, blogs: BLOGS_OK, social: SOCIAL_STALE },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(res.sent).toBe(true);
+    const payload = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body);
+    expect(payload.subject).toContain('social posting stopped');
+    expect(payload.subject).toContain('544h');
+    expect(payload.text).toContain('Social posting');
+    expect(payload.text).toContain('2026-09-05T19:30:05Z');
+    expect(payload.text).toContain('scheduler.log');
+  });
+
+  it('omits the social section when social posting is healthy', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    await sendHealthAlert(
+      { freshness: STALE, stuck: STUCK_OK, blogs: BLOGS_OK, social: SOCIAL_OK },
+      fetchImpl as unknown as typeof fetch,
+    );
+    const payload = JSON.parse((fetchImpl.mock.calls[0][1] as { body: string }).body);
+    expect(payload.text).not.toContain('Social posting');
     expect(payload.subject).toContain('STALE');
   });
 

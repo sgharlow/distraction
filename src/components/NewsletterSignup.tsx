@@ -22,7 +22,11 @@ export function NewsletterSignup() {
       });
       const data = await res.json();
 
-      if (data.status === 'subscribed' || data.status === 'already_subscribed') {
+      // Double opt-in: if the confirmation email could not be sent, the signup
+      // is useless until the reader retries (a retry re-sends the link).
+      if (data.status === 'subscribed' && data.confirmation === 'failed') {
+        setStatus('error');
+      } else if (data.status === 'subscribed' || data.status === 'already_subscribed') {
         setStatus(data.status);
       } else {
         setStatus('error');
@@ -37,10 +41,10 @@ export function NewsletterSignup() {
       <div className="max-w-[600px] mx-auto px-5 py-6 text-center">
         <div className="bg-surface-overlay rounded-[6px] p-3.5">
           <div className="font-sans text-[9px] font-semibold tracking-[2px] uppercase text-action mb-1">
-            You&apos;re in
+            Check your inbox
           </div>
           <p className="font-serif text-xs text-text-secondary m-0">
-            You&apos;re on the list. We&apos;ll notify you when the weekly email launches.
+            We sent you a confirmation link. Click it to start receiving the weekly email.
           </p>
         </div>
       </div>

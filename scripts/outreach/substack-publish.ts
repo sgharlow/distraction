@@ -12,6 +12,7 @@
  */
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import { finishRun } from './post-outcome';
 config({ path: resolve(__dirname, '../../.env.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -85,6 +86,8 @@ async function main() {
       console.log('  Substack session expired. Please log in manually first.');
       console.log('  Run: npx playwright open https://distractionindex.substack.com/publish/home');
       await context.close();
+      // Loud: this used to return (exit 0) every Sunday while nothing published.
+      process.exitCode = finishRun('substack-publish', ['Substack session expired - manual re-login required']);
       return;
     }
 
@@ -128,9 +131,11 @@ async function main() {
       console.log('  SUCCESS — Published to Substack!');
     } else {
       console.log('  Could not find publish confirmation button');
+      process.exitCode = finishRun('substack-publish', ['publish confirmation button not found - post NOT sent']);
     }
   } catch (e: any) {
     console.log(`  ERROR: ${e.message.substring(0, 100)}`);
+    process.exitCode = finishRun('substack-publish', [`threw: ${e.message.substring(0, 200)}`]);
   } finally {
     await context.close();
   }

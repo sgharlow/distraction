@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkPipelineFreshness } from '@/lib/monitor/freshness';
 import { checkStuckWeeks } from '@/lib/monitor/stuck-week';
 import { checkMissingBlogs } from '@/lib/monitor/missing-blog';
+import { checkSocialPosting } from '@/lib/monitor/social-posting';
 import { sendHealthAlert } from '@/lib/monitor/alert';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,10 @@ export const maxDuration = 60;
  *   3. Missing blogs — a frozen week whose cascade blog step never wrote. The
  *      freeze logs 'completed' BEFORE the cascade and swallows its errors, so
  *      this produced no signal at all for 17 weeks (67-83).
+ *   4. Social posting stopped — no public Bluesky post inside 36h. The posts
+ *      come from a scheduler on Steve's PC whose tasks reported success for
+ *      three weeks (Sept 2026) while never starting; this watches the outcome
+ *      from outside the PC.
  *
  * If ANY is unhealthy it emails the operator via Resend (Supabase-independent,
  * so it fires even when Supabase itself is the outage). Daily cadence
@@ -34,27 +39,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [freshness, stuck, blogs] = await Promise.all([
+  const [freshness, stuck, blogs, social] = await Promise.all([
     checkPipelineFreshness(),
     checkStuckWeeks(),
     checkMissingBlogs(),
+    checkSocialPosting(),
   ]);
 
   let alert = { sent: false } as Awaited<ReturnType<typeof sendHealthAlert>>;
-  if (!freshness.healthy || !stuck.healthy || !blogs.healthy) {
-    alert = await sendHealthAlert({ freshness, stuck, blogs });
+  if (!freshness.healthy || !stuck.healthy || !blogs.healthy || !social.healthy) {
+    alert = await sendHealthAlert({ freshness, stuck, blogs, social });
     console.error(
       '[monitor] Pipeline unhealthy:',
       'freshness=', freshness.detail,
       '| stuck=', stuck.detail,
       '| blogs=', blogs.detail,
+      '| social=', social.detail,
       '| alert:', JSON.stringify(alert),
     );
   }
 
   // 200 to the cron regardless (the cron ran successfully); the payload carries
   // the health verdict and whether an alert was dispatched.
-  return NextResponse.json({ ok: true, freshness, stuck, blogs, alert });
+  return NextResponse.json({ ok: true, freshness, stuck, blogs, social, alert });
 }
 
 export async function POST(request: NextRequest) {

@@ -3,12 +3,14 @@ import type { NextRequest } from 'next/server';
 import type { FreshnessStatus } from '@/lib/monitor/freshness';
 import type { StuckWeekStatus } from '@/lib/monitor/stuck-week';
 import type { MissingBlogStatus } from '@/lib/monitor/missing-blog';
+import type { SocialPostingStatus } from '@/lib/monitor/social-posting';
 
 // ── Mock the freshness check, stuck-week check, missing-blog check, and alert sender ──
 const mockCheck = vi.fn();
 const mockStuck = vi.fn();
 const mockBlogs = vi.fn();
 const mockSend = vi.fn();
+const mockSocial = vi.fn();
 
 vi.mock('@/lib/monitor/freshness', () => ({
   checkPipelineFreshness: (...args: unknown[]) => mockCheck(...args),
@@ -18,6 +20,9 @@ vi.mock('@/lib/monitor/stuck-week', () => ({
 }));
 vi.mock('@/lib/monitor/missing-blog', () => ({
   checkMissingBlogs: (...args: unknown[]) => mockBlogs(...args),
+}));
+vi.mock('@/lib/monitor/social-posting', () => ({
+  checkSocialPosting: (...args: unknown[]) => mockSocial(...args),
 }));
 vi.mock('@/lib/monitor/alert', () => ({
   sendHealthAlert: (...args: unknown[]) => mockSend(...args),
@@ -56,6 +61,14 @@ const STUCK_BAD: StuckWeekStatus = {
 const BLOGS_OK: MissingBlogStatus = {
   healthy: true, state: 'ok', missingWeeks: [], detail: 'no missing blogs',
 };
+const SOCIAL_OK: SocialPostingStatus = {
+  healthy: true, state: 'ok', handle: 'example.bsky.social', lastPostAt: '2026-09-28T01:00:00Z',
+  ageHours: 11, thresholdHours: 36, detail: 'posting',
+};
+const SOCIAL_STALE: SocialPostingStatus = {
+  healthy: false, state: 'stale', handle: 'example.bsky.social', lastPostAt: '2026-09-05T19:30:05Z',
+  ageHours: 544, thresholdHours: 36, detail: 'no post in 544h',
+};
 const BLOGS_BAD: MissingBlogStatus = {
   healthy: false, state: 'missing', missingWeeks: ['2026-07-12'], detail: 'blog never wrote',
 };
@@ -69,6 +82,7 @@ describe('GET /api/monitor', () => {
     // Default all checks healthy; individual tests override.
     mockStuck.mockResolvedValue(STUCK_OK);
     mockBlogs.mockResolvedValue(BLOGS_OK);
+    mockSocial.mockResolvedValue(SOCIAL_OK);
     const mod = await import('@/app/api/monitor/route');
     handler = mod.GET;
   });
@@ -101,7 +115,7 @@ describe('GET /api/monitor', () => {
     const res = await handler(createRequest('test-cron-secret'));
     const body = await res.json() as { alert: { sent: boolean } };
     expect(mockSend).toHaveBeenCalledOnce();
-    expect(mockSend).toHaveBeenCalledWith({ freshness: STALE, stuck: STUCK_OK, blogs: BLOGS_OK });
+    expect(mockSend).toHaveBeenCalledWith({ freshness: STALE, stuck: STUCK_OK, blogs: BLOGS_OK, social: SOCIAL_OK });
     expect(body.alert.sent).toBe(true);
   });
 
@@ -112,7 +126,7 @@ describe('GET /api/monitor', () => {
     const res = await handler(createRequest('test-cron-secret'));
     const body = await res.json() as { alert: { sent: boolean } };
     expect(mockSend).toHaveBeenCalledOnce();
-    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_BAD, blogs: BLOGS_OK });
+    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_BAD, blogs: BLOGS_OK, social: SOCIAL_OK });
     expect(body.alert.sent).toBe(true);
   });
 
@@ -125,9 +139,31 @@ describe('GET /api/monitor', () => {
     const res = await handler(createRequest('test-cron-secret'));
     const body = await res.json() as { blogs: MissingBlogStatus; alert: { sent: boolean } };
     expect(mockSend).toHaveBeenCalledOnce();
-    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_OK, blogs: BLOGS_BAD });
+    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_OK, blogs: BLOGS_BAD, social: SOCIAL_OK });
     expect(body.blogs.missingWeeks).toEqual(['2026-07-12']);
     expect(body.alert.sent).toBe(true);
+  });
+
+  it('sends an alert when social posting has stopped even though the pipeline is healthy', async () => {
+    // The 2026-09-05 signature: site, ingest, freeze, blogs all fine; the PC
+    // scheduler silently stopped posting and every task still reported 0.
+    mockCheck.mockResolvedValue(FRESH);
+    mockSocial.mockResolvedValue(SOCIAL_STALE);
+    mockSend.mockResolvedValue({ sent: true });
+    const res = await handler(createRequest('test-cron-secret'));
+    const body = await res.json() as { social: SocialPostingStatus; alert: { sent: boolean } };
+    expect(mockSend).toHaveBeenCalledOnce();
+    expect(mockSend).toHaveBeenCalledWith({ freshness: FRESH, stuck: STUCK_OK, blogs: BLOGS_OK, social: SOCIAL_STALE });
+    expect(body.social.state).toBe('stale');
+    expect(body.alert.sent).toBe(true);
+  });
+
+  it('reports the social verdict in the payload and sends nothing when posting is healthy', async () => {
+    mockCheck.mockResolvedValue(FRESH);
+    const res = await handler(createRequest('test-cron-secret'));
+    const body = await res.json() as { social: SocialPostingStatus };
+    expect(body.social.state).toBe('ok');
+    expect(mockSend).not.toHaveBeenCalled();
   });
 
   it('still returns 200 when the alert send fails (cron itself succeeded)', async () => {

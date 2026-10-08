@@ -1,26 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  expectedWeek,
-  evaluate,
-  weekFromTitle,
-  mergeListings,
-} from '@/lib/monitor/substack-deadman';
+import { expectedWeek, evaluateHeartbeat } from '@/lib/monitor/substack-deadman';
 import { getWeekNumber, parseWeekId } from '@/lib/weeks';
-
-// Shapes captured from the live public endpoints on 2026-10-08 ~04:15Z
-// (GET /api/v1/archive?sort=new&limit=5 — still lagging at Week 63 while
-// /api/v1/posts already listed Week 92). Fields trimmed to the ones read.
-const WEEK_63 = {
-  title: 'Week 63: A 100/100 Damage Score — and Nobody Noticed',
-  post_date: '2026-03-17T04:43:57.240Z',
-  audience: 'everyone',
-};
-const COMING_SOON = { title: 'Coming soon', post_date: '2026-03-17T04:39:02.716Z', audience: 'everyone' };
-const WEEK_92 = {
-  title: 'Week 92: The Mail-In Voting Bombshell Buried Under Mosquito Control Theater',
-  post_date: '2026-10-08T04:08:40.421Z',
-  audience: 'everyone',
-};
 
 describe('expectedWeek', () => {
   it('Mon 2026-10-12 15:00Z expects Week 93 (the week that froze Sun 10-11)', () => {
@@ -63,67 +43,59 @@ describe('expectedWeek', () => {
   });
 });
 
-describe('weekFromTitle', () => {
-  it('parses "Week N:" titles and ignores everything else', () => {
-    expect(weekFromTitle(WEEK_92.title)).toBe(92);
-    expect(weekFromTitle('Coming soon')).toBeNull();
-    expect(weekFromTitle(undefined)).toBeNull();
-    expect(weekFromTitle(42)).toBeNull();
-  });
-});
 
-describe('evaluate', () => {
-  it('tonight\'s lagging archive [Week 63, Coming soon] with Week 92 expected is MISSING', () => {
-    const v = evaluate([WEEK_63, COMING_SOON], 92);
-    expect(v.state).toBe('MISSING');
-    expect(v.newest).toBe(63);
-    expect(v.expected).toBe(92);
-    expect(v.reason).toContain('Week 63');
-  });
-
-  it('is OK when Week 92 is present', () => {
-    const v = evaluate([WEEK_92, WEEK_63, COMING_SOON], 92);
+describe('evaluateHeartbeat (SUBSTACK_LAST_PUBLISHED_WEEK written by the verified Sunday publish)', () => {
+  it('heartbeat equal to the expected week is OK', () => {
+    const v = evaluateHeartbeat('93', 93);
     expect(v.state).toBe('OK');
+    expect(v.newest).toBe(93);
+    expect(v.expected).toBe(93);
+  });
+
+  it('a heartbeat one week ahead (Sunday published, Monday not yet due) is OK', () => {
+    expect(evaluateHeartbeat('93', 92).state).toBe('OK');
+  });
+
+  it('tolerates surrounding whitespace from the vars context', () => {
+    expect(evaluateHeartbeat(' 93\n', 93).state).toBe('OK');
+  });
+
+  it('a heartbeat lower than expected is MISSING and names both weeks', () => {
+    const v = evaluateHeartbeat('92', 93);
+    expect(v.state).toBe('MISSING');
     expect(v.newest).toBe(92);
+    expect(v.reason).toContain('Week 92');
+    expect(v.reason).toContain('Week 93');
   });
 
-  it('is OK when a later week than expected is present', () => {
-    expect(evaluate([WEEK_92], 91).state).toBe('OK');
+  it('an unset variable (empty string from the vars context) is ERROR, never OK', () => {
+    for (const raw of ['', '   ', undefined, null]) {
+      const v = evaluateHeartbeat(raw, 93);
+      expect(v.state).toBe('ERROR');
+      expect(v.newest).toBeNull();
+      expect(v.reason).toContain('SUBSTACK_LAST_PUBLISHED_WEEK');
+    }
   });
 
-  it('an empty archive is ERROR, never OK', () => {
-    const v = evaluate([], 92);
+  it('a non-numeric or non-integer heartbeat is ERROR, never OK', () => {
+    for (const raw of ['Week 93', '93.5', '-93', 'abc', '0x5d', '1e3', 93 as unknown]) {
+      expect(evaluateHeartbeat(raw, 93).state).toBe('ERROR');
+    }
+  });
+
+  it('week 0 is ERROR', () => {
+    expect(evaluateHeartbeat('0', 93).state).toBe('ERROR');
+  });
+
+  it('a heartbeat more than one week ahead of the calendar is ERROR (a bad write must not mask months of silence)', () => {
+    const v = evaluateHeartbeat('999', 93);
     expect(v.state).toBe('ERROR');
-    expect(v.newest).toBeNull();
+    expect(v.reason).toContain('ahead');
   });
 
-  it('an archive with no parseable "Week N" title is ERROR, never OK', () => {
-    expect(evaluate([COMING_SOON], 92).state).toBe('ERROR');
-  });
-
-  it('a non-array body (API shape change) is ERROR, never OK', () => {
-    expect(evaluate({ posts: [WEEK_92] }, 92).state).toBe('ERROR');
-    expect(evaluate(null, 92).state).toBe('ERROR');
-  });
-});
-
-describe('mergeListings', () => {
-  it('unions the lagging archive with the fresh posts listing so a lag alone does not alert', () => {
-    const merged = mergeListings([
-      { source: 'archive', body: [WEEK_63, COMING_SOON] },
-      { source: 'posts', body: [WEEK_92, WEEK_63] },
-    ]);
-    expect(merged.errors).toEqual([]);
-    expect(evaluate(merged.items, 92).state).toBe('OK');
-  });
-
-  it('records a failed or mis-shaped source as an error and keeps the other', () => {
-    const merged = mergeListings([
-      { source: 'archive', error: 'HTTP 503' },
-      { source: 'posts', body: { not: 'an array' } },
-    ]);
-    expect(merged.items).toEqual([]);
-    expect(merged.errors).toEqual(['archive: HTTP 503', 'posts: response is not an array']);
-    expect(evaluate(merged.items, 92).state).toBe('ERROR');
+  it('keeps a garbage value out of the one-line reason when it is long', () => {
+    const v = evaluateHeartbeat('x'.repeat(500), 93);
+    expect(v.state).toBe('ERROR');
+    expect(v.reason.length).toBeLessThan(200);
   });
 });

@@ -1,13 +1,15 @@
 # Substack weekly-publish dead-man (2026-10-07). The Sunday laptop task
 # DistractionIndex-WeeklyCascade failed silently from ~March to 2026-10-04 (expired
 # session; the failure only set an exit code nobody reads). A job cannot report its
-# own absence, so this checks the PUBLIC Substack post list from the cloud and opens
-# a priority-high issue (read by /daily-priority) when the expected week is missing.
-# Same design as sgharlow/demand-insight warmup-deadman.yml, with one gap closed:
-# a check that crashes or never runs its script ALERTS (no state = ERROR).
-# Monday 15:00Z (Sunday run + 30h, so the lagging archive has caught up); Tuesday
-# re-checks the same week because hosted cron drops runs. Alerts only — never use
-# this to decide to re-publish.
+# own absence, so this checks from the cloud and opens a priority-high issue (read
+# by /daily-priority) when the expected week has no heartbeat.
+# HEARTBEAT, NOT SUBSTACK: Substack answers HTTP 403 to GitHub-hosted runners
+# (run 37729669794), so this never contacts Substack. substack-publish.ts writes the
+# repository variable SUBSTACK_LAST_PUBLISHED_WEEK only after it has seen the post on
+# the logged-in dashboard's Published list; this reads it through the vars context.
+# Unset / non-numeric = ERROR. A check that crashes or never runs its script ALERTS
+# (no state = ERROR). Monday 15:00Z; Tuesday re-checks the same week because hosted
+# cron drops runs. Alerts only — never use this to decide to re-publish.
 name: substack publish dead-man
 
 on:
@@ -37,6 +39,10 @@ jobs:
       - id: verdict
         env:
           AS_OF: ${{ github.event.inputs.as_of }}
+          # Repository variables (Settings > Secrets and variables > Actions > Variables),
+          # written by the verified Sunday publish. An unset variable expands to ''.
+          SUBSTACK_LAST_PUBLISHED_WEEK: ${{ vars.SUBSTACK_LAST_PUBLISHED_WEEK }}
+          SUBSTACK_LAST_PUBLISHED_AT: ${{ vars.SUBSTACK_LAST_PUBLISHED_AT }}
         run: |
           set +e
           if [ -n "$AS_OF" ]; then
@@ -66,14 +72,22 @@ jobs:
           if [ "$STATE" = "OK" ]; then
             open=$(gh issue list --state open --label priority-high --json number,title --jq ".[] | select(.title | startswith(\"${prefix}\")) | .number")
             for n in $open; do
-              gh issue close "$n" --comment "Publishing is running again: ${REASON}. If this issue's own week never appeared on Substack, it was skipped; publish it by hand if wanted. ${run_url}"
+              gh issue close "$n" --comment "Publishing is running again: ${REASON}. If this issue's own week was never published, it was skipped; publish it by hand if wanted. ${run_url}"
             done
             echo "OK: ${REASON}"
             exit 0
           fi
           existing=$(gh issue list --state open --label priority-high --json number,title --jq '.[] | select(.title == env.TITLE) | .number' | head -n1)
           if [ -z "$existing" ]; then
-            body="**${STATE}** — ${REASON}. The Sunday 09:00Z laptop task DistractionIndex-WeeklyCascade runs scripts/outreach/substack-publish.ts; it failed silently from March to 2026-10-04 on an expired Substack session. Check the PC was on, read scripts/outreach/cascade.log, re-login if needed, and run it by hand. The archive listing lags, so confirm on https://distractionindex.substack.com before re-publishing anything. This issue closes itself when a later check finds the week. Detected by ${run_url}"
+            body="**${STATE}** — ${REASON}.
+
+          The Sunday 09:00Z (02:00 MST) laptop task DistractionIndex-WeeklyCascade runs scripts/outreach/substack-publish.ts. After it clicks send, it checks the post on the Substack dashboard's Published list and only then writes the heartbeat variable SUBSTACK_LAST_PUBLISHED_WEEK. A missing heartbeat means one of:
+          - the Sunday run did not happen (PC off or not logged in at 02:00);
+          - the Substack session expired (the log says to re-login);
+          - verification failed (send clicked, post not seen on the dashboard);
+          - the heartbeat write failed (the post DID go out; gh not signed in or not on PATH).
+
+          Read scripts/outreach/cascade.log and look at https://distractionindex.substack.com/publish/posts/published BEFORE re-publishing anything — a duplicate emails every subscriber. If the post is already there, only restore the heartbeat: gh variable set SUBSTACK_LAST_PUBLISHED_WEEK --body ${WEEK:-N} -R ${GITHUB_REPOSITORY}. This issue closes itself when a later check finds the heartbeat. Detected by ${run_url}"
             gh issue create --title "$TITLE" --label priority-high --body "$body"
           else
             gh issue comment "$existing" --body "Still ${STATE} at $(date -u +%FT%TZ): ${REASON} (${run_url})"

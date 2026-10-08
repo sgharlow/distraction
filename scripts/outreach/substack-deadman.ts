@@ -1,52 +1,25 @@
 /**
  * Substack weekly-publish dead-man check (run by .github/workflows/substack-deadman.yml).
  *
- * Reads the PUBLIC post listings of distractionindex.substack.com — no secrets,
- * no .env.local — and decides whether the week the Sunday cascade should have
- * published is there. Writes state/week/newest/reason to $GITHUB_OUTPUT when set,
- * and prints the verdict as one JSON line.
+ * Does NOT contact Substack (it answers HTTP 403 to GitHub-hosted runners). It
+ * judges the heartbeat the verified Sunday publish writes to the GitHub Actions
+ * repository variable SUBSTACK_LAST_PUBLISHED_WEEK; the workflow passes it in as
+ * the env var of the same name (and SUBSTACK_LAST_PUBLISHED_AT, shown only).
+ * Writes state/week/newest/reason to $GITHUB_OUTPUT when set, and prints the
+ * verdict as one JSON line.
  *
  * Exit 0 = OK, 1 = MISSING or ERROR. Any crash inside main() is caught and written
  * as state=ERROR (fail-closed); a crash before main() writes nothing, and the
  * workflow treats a missing state as ERROR too.
  *
- * It ALERTS only. Never use it to decide to re-publish: the archive listing lags.
+ * It ALERTS only. Never use it to decide to re-publish.
  *
- * Usage:
- *   npx tsx scripts/outreach/substack-deadman.ts
- *   npx tsx scripts/outreach/substack-deadman.ts --as-of 2026-10-12T15:00:00Z
+ * Usage (locally, reading the live variable):
+ *   SUBSTACK_LAST_PUBLISHED_WEEK=$(gh variable get SUBSTACK_LAST_PUBLISHED_WEEK -R sgharlow/distraction) \
+ *     npx tsx scripts/outreach/substack-deadman.ts [--as-of 2026-10-12T15:00:00Z]
  */
 import { appendFileSync } from 'fs';
-import {
-  evaluate,
-  expectedWeek,
-  mergeListings,
-  type ListingSource,
-  type Verdict,
-} from '../../src/lib/monitor/substack-deadman';
-
-const SUBSTACK_URL = 'https://distractionindex.substack.com';
-
-// /api/v1/archive is the public archive (lags: measured 2026-10-08 still at Week 63
-// after Week 92 was live, even on a Cloudflare MISS); /api/v1/posts listed Week 92
-// within minutes. Both are read and unioned, so a lag alone does not alert.
-const LISTINGS: { source: string; url: string }[] = [
-  { source: 'archive', url: `${SUBSTACK_URL}/api/v1/archive?sort=new&limit=12` },
-  { source: 'posts', url: `${SUBSTACK_URL}/api/v1/posts?limit=12` },
-];
-
-async function fetchListing(source: string, url: string): Promise<ListingSource> {
-  try {
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json', 'User-Agent': 'distraction-index-substack-deadman/1.0' },
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!res.ok) return { source, error: `HTTP ${res.status}` };
-    return { source, body: await res.json() };
-  } catch (err) {
-    return { source, error: err instanceof Error ? err.message : String(err) };
-  }
-}
+import { evaluateHeartbeat, expectedWeek, HEARTBEAT_VAR, type Verdict } from '../../src/lib/monitor/substack-deadman';
 
 function parseAsOf(argv: string[]): Date {
   const i = argv.indexOf('--as-of');
@@ -70,11 +43,10 @@ function writeOutputs(v: { state: string; expected: number | null; newest: numbe
 async function main(): Promise<Verdict> {
   const asOf = parseAsOf(process.argv.slice(2));
   const expected = expectedWeek(asOf);
-  const sources = await Promise.all(LISTINGS.map((l) => fetchListing(l.source, l.url)));
-  const { items, errors } = mergeListings(sources);
-  const verdict = evaluate(items, expected);
-  const reason = errors.length ? `${verdict.reason} [source errors: ${errors.join('; ')}]` : verdict.reason;
-  return { ...verdict, reason: `as of ${asOf.toISOString()}: ${reason}` };
+  const verdict = evaluateHeartbeat(process.env[HEARTBEAT_VAR], expected);
+  const at = (process.env.SUBSTACK_LAST_PUBLISHED_AT ?? '').trim().slice(0, 40);
+  const when = at ? ` (heartbeat written ${at})` : '';
+  return { ...verdict, reason: `as of ${asOf.toISOString()}: ${verdict.reason}${when}` };
 }
 
 main()

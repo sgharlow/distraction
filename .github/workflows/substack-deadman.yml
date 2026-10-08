@@ -1,0 +1,81 @@
+# Substack weekly-publish dead-man (2026-10-07). The Sunday laptop task
+# DistractionIndex-WeeklyCascade failed silently from ~March to 2026-10-04 (expired
+# session; the failure only set an exit code nobody reads). A job cannot report its
+# own absence, so this checks the PUBLIC Substack post list from the cloud and opens
+# a priority-high issue (read by /daily-priority) when the expected week is missing.
+# Same design as sgharlow/demand-insight warmup-deadman.yml, with one gap closed:
+# a check that crashes or never runs its script ALERTS (no state = ERROR).
+# Monday 15:00Z (Sunday run + 30h, so the lagging archive has caught up); Tuesday
+# re-checks the same week because hosted cron drops runs. Alerts only — never use
+# this to decide to re-publish.
+name: substack publish dead-man
+
+on:
+  schedule:
+    - cron: '0 15 * * 1'   # Mon 15:00Z = 08:00 America/Phoenix
+    - cron: '0 15 * * 2'   # Tue re-check of the same week
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: 'Judge as of this ISO time (e.g. 2026-10-12T15:00:00Z) — used to prove the alert red'
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - id: verdict
+        env:
+          AS_OF: ${{ github.event.inputs.as_of }}
+        run: |
+          set +e
+          if [ -n "$AS_OF" ]; then
+            npx tsx scripts/outreach/substack-deadman.ts --as-of "$AS_OF"
+          else
+            npx tsx scripts/outreach/substack-deadman.ts
+          fi
+          echo "script exit $?"
+      # always(): a failed checkout / npm ci / script must still reach the alert.
+      - name: Raise or clear the alert
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATE: ${{ steps.verdict.outputs.state }}
+          WEEK: ${{ steps.verdict.outputs.week }}
+          REASON: ${{ steps.verdict.outputs.reason }}
+        run: |
+          if [ -z "$STATE" ]; then
+            STATE=ERROR
+            REASON="the check produced no verdict (checkout, npm ci or the script crashed before writing one)"
+          fi
+          prefix="substack weekly post missing:"
+          export TITLE="${prefix} Week ${WEEK:-?}"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh label create priority-high --color B60205 --description "Outranks feature work; read by /daily-priority" --force >/dev/null
+          if [ "$STATE" = "OK" ]; then
+            open=$(gh issue list --state open --label priority-high --json number,title --jq ".[] | select(.title | startswith(\"${prefix}\")) | .number")
+            for n in $open; do
+              gh issue close "$n" --comment "Publishing is running again: ${REASON}. If this issue's own week never appeared on Substack, it was skipped; publish it by hand if wanted. ${run_url}"
+            done
+            echo "OK: ${REASON}"
+            exit 0
+          fi
+          existing=$(gh issue list --state open --label priority-high --json number,title --jq '.[] | select(.title == env.TITLE) | .number' | head -n1)
+          if [ -z "$existing" ]; then
+            body="**${STATE}** — ${REASON}. The Sunday 09:00Z laptop task DistractionIndex-WeeklyCascade runs scripts/outreach/substack-publish.ts; it failed silently from March to 2026-10-04 on an expired Substack session. Check the PC was on, read scripts/outreach/cascade.log, re-login if needed, and run it by hand. The archive listing lags, so confirm on https://distractionindex.substack.com before re-publishing anything. This issue closes itself when a later check finds the week. Detected by ${run_url}"
+            gh issue create --title "$TITLE" --label priority-high --body "$body"
+          else
+            gh issue comment "$existing" --body "Still ${STATE} at $(date -u +%FT%TZ): ${REASON} (${run_url})"
+          fi
+          exit 1

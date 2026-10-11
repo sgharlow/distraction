@@ -129,6 +129,60 @@ export async function verifyPublished(page: DashboardPage, title: string, opts: 
   return { verified: false, checks: attempts, reason };
 }
 
+/** The subset of a Playwright Page the publish watcher uses. */
+export interface PublishWatchPage {
+  waitForTimeout(ms: number): Promise<void>;
+  url(): string;
+}
+
+export interface PublishWaitResult {
+  done: boolean;
+  waitedMs: number;
+  url: string;
+  reason: string;
+}
+
+/** Where Substack lands once a send has finished: /publish/posts/detail/<id>[/share-center]. */
+const PUBLISHED_POST_PAGE = /\/publish\/posts\/detail\/\d+/;
+
+/**
+ * Wait on the editor until Substack has actually finished publishing.
+ *
+ * WHY (2026-10-11). After "Send to everyone now" the editor shows "Publishing..." for ~45 s and
+ * only then moves to /publish/posts/detail/<id>/share-center. The publish run used to leave the
+ * page ~8 s after the click (to verify on the dashboard), and leaving cancels the publish: Week 93
+ * stayed a DRAFT. Done means the post page loaded; a page still on the editor at the timeout, or
+ * a redirect to sign-in, is a failure. Never navigate the page while this is waiting.
+ */
+export async function waitForPublishComplete(
+  page: PublishWatchPage,
+  opts: { timeoutMs?: number; pollMs?: number; log?: (m: string) => void } = {},
+): Promise<PublishWaitResult> {
+  const timeoutMs = opts.timeoutMs ?? 240_000;
+  const pollMs = opts.pollMs ?? 5_000;
+  const log = opts.log ?? console.log;
+  let waitedMs = 0;
+  let url = page.url();
+  while (waitedMs < timeoutMs) {
+    await page.waitForTimeout(pollMs);
+    waitedMs += pollMs;
+    url = page.url();
+    if (PUBLISHED_POST_PAGE.test(url)) {
+      return { done: true, waitedMs, url, reason: `publish finished after ~${Math.round(waitedMs / 1000)} s (${url})` };
+    }
+    if (/sign-in|login/i.test(url)) {
+      return { done: false, waitedMs, url, reason: `redirected to sign-in while publishing (${url})` };
+    }
+    if (waitedMs % 30_000 === 0) log(`  still publishing after ${waitedMs / 1000} s...`);
+  }
+  return {
+    done: false,
+    waitedMs,
+    url,
+    reason: `still on the editor after ${Math.round(waitedMs / 1000)} s (${url}); Substack did not finish publishing`,
+  };
+}
+
 function ghFailure(r: GhResult): string {
   if (r.error) return r.error.message;
   return `exit ${r.status}: ${(r.stderr || r.stdout).trim().slice(0, 200)}`;

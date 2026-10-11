@@ -6,9 +6,11 @@ import {
   verifyPublished,
   writeHeartbeat,
   confirmPublishAndHeartbeat,
+  waitForPublishComplete,
   PUBLISHED_DASHBOARD_URL,
   type DashboardPage,
   type GhResult,
+  type PublishWatchPage,
 } from '../../scripts/outreach/substack-verify';
 
 const TITLE = 'Week 93: The Mail-In Voting Bombshell Buried Under Mosquito Control Theater';
@@ -211,11 +213,74 @@ describe('confirmPublishAndHeartbeat (what substack-publish.ts runs after the se
   });
 });
 
+// captured_from: live drive of draft 219937838 on 2026-10-11 (Week 93). After "Send to everyone now"
+// the editor stayed on /publish/post/<id> showing "Publishing..." for ~45 s, then moved to the URL
+// below. A run that left the page ~8 s after the click left the post as a DRAFT (reproduced once).
+const EDITOR_URL = 'https://distractionindex.substack.com/publish/post/219937838';
+const SHARE_CENTER_URL = 'https://distractionindex.substack.com/publish/posts/detail/219937838/share-center';
+
+/** A fake editor page: url() returns the next entry on each poll (the last one repeats). */
+function fakeWatchPage(urls: string[]) {
+  const calls = { waits: [] as number[], polls: 0 };
+  const page: PublishWatchPage = {
+    waitForTimeout: async (ms: number) => {
+      calls.waits.push(ms);
+    },
+    url: () => urls[Math.min(calls.polls++, urls.length - 1)],
+  };
+  return { page, calls };
+}
+const total = (ms: number[]) => ms.reduce((a, b) => a + b, 0);
+
+describe('waitForPublishComplete (substack-publish.ts must not leave the editor mid-publish)', () => {
+  it('keeps waiting through ~45 s of "Publishing..." and completes when the post page loads', async () => {
+    const urls = [...Array(9).fill(EDITOR_URL), SHARE_CENTER_URL];
+    const { page, calls } = fakeWatchPage(urls);
+    const r = await waitForPublishComplete(page, { pollMs: 5_000, log: () => {} });
+    expect(r.done).toBe(true);
+    expect(r.url).toBe(SHARE_CENTER_URL);
+    expect(total(calls.waits)).toBeGreaterThanOrEqual(45_000);
+  });
+
+  it('is never done while the page is still the editor (the 8 s exit that left Week 93 a draft)', async () => {
+    const { page, calls } = fakeWatchPage([EDITOR_URL]);
+    const r = await waitForPublishComplete(page, { pollMs: 5_000, timeoutMs: 60_000, log: () => {} });
+    expect(r.done).toBe(false);
+    expect(total(calls.waits)).toBeGreaterThanOrEqual(60_000);
+    expect(r.reason).toMatch(/still on the editor/i);
+  });
+
+  it('accepts any post-detail page, not only share-center', async () => {
+    const { page } = fakeWatchPage([EDITOR_URL, 'https://distractionindex.substack.com/publish/posts/detail/219937838']);
+    const r = await waitForPublishComplete(page, { pollMs: 5_000, log: () => {} });
+    expect(r.done).toBe(true);
+  });
+
+  it('a redirect to sign-in is a failure, never done', async () => {
+    const { page } = fakeWatchPage([EDITOR_URL, 'https://substack.com/sign-in?redirect=%2Fpublish']);
+    const r = await waitForPublishComplete(page, { pollMs: 5_000, timeoutMs: 30_000, log: () => {} });
+    expect(r.done).toBe(false);
+    expect(r.reason).toMatch(/sign-in/i);
+  });
+
+  it('defaults to waiting at least 3 minutes before giving up', async () => {
+    const { page, calls } = fakeWatchPage([EDITOR_URL]);
+    await waitForPublishComplete(page, { log: () => {} });
+    expect(total(calls.waits)).toBeGreaterThanOrEqual(180_000);
+  });
+});
+
 describe('substack-publish.ts wiring', () => {
   const src = readFileSync(resolve(__dirname, '../../scripts/outreach/substack-publish.ts'), 'utf8');
 
   it('routes the post-send step through confirmPublishAndHeartbeat', () => {
     expect(src).toContain('confirmPublishAndHeartbeat(');
+  });
+
+  it('waits for the publish to complete BEFORE verifying (verifying navigates away from the editor)', () => {
+    const wait = src.indexOf('waitForPublishComplete(');
+    expect(wait).toBeGreaterThan(-1);
+    expect(wait).toBeLessThan(src.indexOf('confirmPublishAndHeartbeat({'));
   });
 
   it('prints no SUCCESS line of its own (only the verified helper may)', () => {

@@ -16,7 +16,8 @@ echo  Distraction Index - Full Scheduler Setup
 echo ============================================================
 echo.
 
-set PROJECT_DIR=C:\Users\sghar\CascadeProjects\distraction
+REM Project folder = two levels above this script (scripts\outreach\), so a moved checkout still works.
+for %%I in ("%~dp0..\..") do set "PROJECT_DIR=%%~fI"
 
 REM --- Delete all existing tasks first (ignore errors) ---
 schtasks /delete /tn "DistractionIndex-Morning" /f >nul 2>&1

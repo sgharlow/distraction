@@ -7,5 +7,6 @@ REM ============================================================
 
 timeout /t 60 /nobreak >nul
 
-cd /d C:\Users\sghar\CascadeProjects\distraction
+REM Project folder = two levels above this script (scripts\outreach\), so a moved checkout still works.
+cd /d "%~dp0..\.."
 npx tsx scripts/outreach/scheduler.ts --catchup >> scripts\outreach\scheduler.log 2>&1

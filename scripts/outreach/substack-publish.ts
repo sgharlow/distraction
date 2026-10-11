@@ -5,7 +5,8 @@
  * Designed to run locally via Task Scheduler after the weekly freeze.
  * NOT suitable for Vercel serverless.
  *
- * After the send click the run verifies the post on the dashboard's Published
+ * After the send click the run stays on the editor until Substack finishes
+ * publishing (~45 s; leaving earlier cancels it), then verifies the post on the dashboard's Published
  * list and only then writes the heartbeat GitHub variable
  * SUBSTACK_LAST_PUBLISHED_WEEK (needs `gh` signed in as a repo admin); see
  * substack-verify.ts. Either failing exits non-zero.
@@ -20,7 +21,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 import { finishRun } from './post-outcome';
-import { confirmPublishAndHeartbeat, verifyPublished, writeHeartbeat } from './substack-verify';
+import { confirmPublishAndHeartbeat, verifyPublished, waitForPublishComplete, writeHeartbeat } from './substack-verify';
 config({ path: resolve(__dirname, '../../.env.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -149,8 +150,19 @@ async function main() {
       if (await addBtnsBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
         await addBtnsBtn.click();
       }
-      // Let the send settle before leaving the editor page.
-      await page.waitForTimeout(5000);
+      // Stay on the editor until Substack finishes ("Publishing..." takes ~45 s). Leaving
+      // the page earlier cancels the publish and leaves the post a DRAFT (Week 93, 2026-10-11).
+      const sent = await waitForPublishComplete(page, { log: (m) => console.log(m) });
+      if (!sent.done) {
+        console.log(`  NOT PUBLISHED — ${sent.reason}`);
+        process.exitCode = finishRun('substack-publish', [
+          `send clicked but Substack did not finish publishing: ${sent.reason}. The post is probably a DRAFT — ` +
+            'open https://distractionindex.substack.com/publish/posts/drafts and publish that draft; do NOT re-run ' +
+            '(a re-run creates a second draft, and a second publish emails every subscriber twice).',
+        ]);
+        return;
+      }
+      console.log(`  ${sent.reason}`);
 
       // Clicking is not proof. Confirm the post on the dashboard's Published
       // list, then write the heartbeat the Monday GitHub dead-man reads.

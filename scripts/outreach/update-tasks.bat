@@ -1,17 +1,19 @@
 @echo off
+REM Project folder = two levels above this script (scripts\outreach\), so a moved checkout still works.
+for %%I in ("%~dp0..\..") do set "PROJECT_DIR=%%~fI"
 echo Updating Task Scheduler tasks with wake-to-run...
 
 REM Delete and recreate with /RL HIGHEST and wake capability
 schtasks /delete /tn "DistractionIndex-Morning" /f >nul 2>&1
-schtasks /create /tn "DistractionIndex-Morning" /tr "cmd /c cd /d C:\Users\sghar\CascadeProjects\distraction && npx tsx scripts/outreach/scheduler.ts --post morning >> scripts\outreach\scheduler.log 2>&1" /sc daily /st 06:30 /f /rl HIGHEST
+schtasks /create /tn "DistractionIndex-Morning" /tr "cmd /c cd /d %PROJECT_DIR% && npx tsx scripts/outreach/scheduler.ts --post morning >> scripts\outreach\scheduler.log 2>&1" /sc daily /st 06:30 /f /rl HIGHEST
 if %errorlevel%==0 (echo   [OK] Morning - 6:30 AM) else (echo   [FAIL] Morning)
 
 schtasks /delete /tn "DistractionIndex-Midday" /f >nul 2>&1
-schtasks /create /tn "DistractionIndex-Midday" /tr "cmd /c cd /d C:\Users\sghar\CascadeProjects\distraction && npx tsx scripts/outreach/scheduler.ts --post midday >> scripts\outreach\scheduler.log 2>&1" /sc daily /st 12:30 /f /rl HIGHEST
+schtasks /create /tn "DistractionIndex-Midday" /tr "cmd /c cd /d %PROJECT_DIR% && npx tsx scripts/outreach/scheduler.ts --post midday >> scripts\outreach\scheduler.log 2>&1" /sc daily /st 12:30 /f /rl HIGHEST
 if %errorlevel%==0 (echo   [OK] Midday - 12:30 PM) else (echo   [FAIL] Midday)
 
 schtasks /delete /tn "DistractionIndex-Evening" /f >nul 2>&1
-schtasks /create /tn "DistractionIndex-Evening" /tr "cmd /c cd /d C:\Users\sghar\CascadeProjects\distraction && npx tsx scripts/outreach/scheduler.ts --post evening >> scripts\outreach\scheduler.log 2>&1" /sc daily /st 18:00 /f /rl HIGHEST
+schtasks /create /tn "DistractionIndex-Evening" /tr "cmd /c cd /d %PROJECT_DIR% && npx tsx scripts/outreach/scheduler.ts --post evening >> scripts\outreach\scheduler.log 2>&1" /sc daily /st 18:00 /f /rl HIGHEST
 if %errorlevel%==0 (echo   [OK] Evening - 6:00 PM) else (echo   [FAIL] Evening)
 
 echo.

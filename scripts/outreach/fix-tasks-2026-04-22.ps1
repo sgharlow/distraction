@@ -4,7 +4,8 @@
 # Deletes them, recreates with /IT (InteractiveToken = no stored password),
 # then relaxes battery policy + enables StartWhenAvailable.
 
-$PROJECT_DIR = "C:\Users\sghar\CascadeProjects\distraction"
+# Project folder = two levels above this script (scripts\outreach\), so a moved checkout still works.
+$PROJECT_DIR = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 $tasks = @(
   @{

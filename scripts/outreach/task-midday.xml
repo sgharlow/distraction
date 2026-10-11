@@ -18,7 +18,7 @@
   <Actions>
     <Exec>
       <Command>cmd</Command>
-      <Arguments>/c cd /d C:\Users\sghar\CascadeProjects\distraction &amp;&amp; npx tsx scripts/outreach/scheduler.ts --post midday &gt;&gt; scripts\outreach\scheduler.log 2&gt;&amp;1</Arguments>
+      <Arguments>/c cd /d __PROJECT_DIR__ &amp;&amp; npx tsx scripts/outreach/scheduler.ts --post midday &gt;&gt; scripts\outreach\scheduler.log 2&gt;&amp;1</Arguments>
     </Exec>
   </Actions>
 </Task>

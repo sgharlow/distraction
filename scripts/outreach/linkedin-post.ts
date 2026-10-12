@@ -12,6 +12,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 import { generatePost, type PostSlot } from './content-variants';
+import { confirmNewPost, linkedInListUrl, postFingerprint, readListCount, UNVERIFIED_PREFIX, waitUntilGone } from './post-verify';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -37,10 +38,8 @@ async function postToLinkedIn(text: string, dryRun: boolean): Promise<boolean> {
 
   try {
     // Navigate to company post page
-    await page.goto(
-      `https://www.linkedin.com/company/${companyId}/admin/page-posts/published?share=true&shareActorType=ORGANIZATION&shareOrganizationActor=urn%3Ali%3Afsd_company%3A${companyId}`,
-      { waitUntil: 'networkidle', timeout: 30000 }
-    );
+    const shareUrl = `https://www.linkedin.com/company/${companyId}/admin/page-posts/published?share=true&shareActorType=ORGANIZATION&shareOrganizationActor=urn%3Ali%3Afsd_company%3A${companyId}`;
+    await page.goto(shareUrl, { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
 
     // Check if we need to log in
@@ -56,6 +55,17 @@ async function postToLinkedIn(text: string, dryRun: boolean): Promise<boolean> {
       await page.waitForTimeout(3000);
     }
 
+    // Count this post's opening on the published list BEFORE posting (post-verify.ts).
+    const listUrl = linkedInListUrl(companyId);
+    const fingerprint = postFingerprint(text);
+    const before = await readListCount(page, listUrl, fingerprint);
+    if (before.count === null) {
+      console.error(`LinkedIn list unreadable before posting (${before.reason}); not posted`);
+      return false;
+    }
+    await page.goto(shareUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(5000);
+
     // Look for the share/post dialog or composer
     const shareBox = page.getByRole('textbox').first();
     await shareBox.waitFor({ state: 'visible', timeout: 15000 });
@@ -65,9 +75,19 @@ async function postToLinkedIn(text: string, dryRun: boolean): Promise<boolean> {
     // Click Post button
     const postBtn = page.getByRole('button', { name: /post/i }).last();
     await postBtn.click();
-    await page.waitForTimeout(3000);
 
-    console.log('Posted to LinkedIn Company Page successfully');
+    // Stay until the composer closes, then require a new entry on the published list.
+    const closed = await waitUntilGone(page, () => shareBox.isVisible());
+    if (!closed.gone) {
+      console.error(`${UNVERIFIED_PREFIX}: clicked Post but the composer was still open after ${closed.waitedMs / 1000}s; check ${listUrl} before re-posting`);
+      return false;
+    }
+    const v = await confirmNewPost({ page, listUrl, fingerprint, before: before.count, log: (m) => console.log(m) });
+    if (!v.verified) {
+      console.error(`${UNVERIFIED_PREFIX}: clicked Post but no new entry on ${listUrl} (${v.reason}); check it before re-posting`);
+      return false;
+    }
+    console.log(`Posted to LinkedIn Company Page — verified: ${v.reason}`);
     return true;
   } catch (err: any) {
     console.error('LinkedIn post error:', err.message);

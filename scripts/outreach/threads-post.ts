@@ -18,6 +18,15 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { generatePost, type PostSlot } from './content-variants';
+import {
+  confirmNewPost,
+  isUnverified,
+  postFingerprint,
+  readListCount,
+  threadsProfileUrl,
+  UNVERIFIED_PREFIX,
+  waitUntilGone,
+} from './post-verify';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -124,6 +133,20 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
       }
     }
 
+    // Count this post's opening on the profile BEFORE posting (post-verify.ts).
+    // ⚠️ GUESS: the profile list has not been captured live.
+    const profileUrl = threadsProfileUrl(process.env);
+    if (!profileUrl) {
+      return { success: false, error: 'Missing THREADS_PROFILE_URL (or a THREADS_USERNAME handle) needed to verify the post' };
+    }
+    const fingerprint = postFingerprint(text);
+    const before = await readListCount(page, profileUrl, fingerprint);
+    if (before.count === null) {
+      return { success: false, error: `Threads profile unreadable before posting (${before.reason}); not posted` };
+    }
+    await page.goto('https://www.threads.net/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForTimeout(4000);
+
     // Find Create button with broader selectors
     console.log(`  [Threads attempt ${attempt}] Looking for Create button...`);
 
@@ -180,9 +203,17 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
     const postBtn = page.locator('div[role="button"]:has-text("Post")').last();
     await postBtn.waitFor({ state: 'visible', timeout: 10000 });
     await postBtn.click();
-    await page.waitForTimeout(4000);
 
-    console.log(`  [Threads attempt ${attempt}] Posted successfully`);
+    // Stay until the composer closes, then require a new entry on the profile.
+    const closed = await waitUntilGone(page, () => composer.isVisible());
+    if (!closed.gone) {
+      return { success: false, error: `${UNVERIFIED_PREFIX}: clicked Post but the composer was still open after ${closed.waitedMs / 1000}s; check ${profileUrl}` };
+    }
+    const v = await confirmNewPost({ page, listUrl: profileUrl, fingerprint, before: before.count, log: (m) => console.log(m) });
+    if (!v.verified) {
+      return { success: false, error: `${UNVERIFIED_PREFIX}: clicked Post but no new entry on ${profileUrl} (${v.reason})` };
+    }
+    console.log(`  [Threads attempt ${attempt}] Posted — verified: ${v.reason}`);
     return { success: true };
   } catch (err: any) {
     // Save screenshot on failure for debugging
@@ -233,6 +264,11 @@ async function postToThreads(text: string, dryRun: boolean): Promise<boolean> {
     // Don't retry on credential errors — they won't fix themselves
     if (result.error?.includes('Missing THREADS_') || result.error?.includes('Login error')) {
       console.log('  [Threads] Non-retryable error, giving up.');
+      break;
+    }
+    // Never retry after Post was clicked: the post may be live, and a retry posts it twice.
+    if (isUnverified(result.error)) {
+      console.log('  [Threads] Post clicked but unverified — not retrying (a retry could post twice).');
       break;
     }
   }

@@ -25,6 +25,16 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { generatePost, type PostSlot } from './content-variants';
 import { postToTwitter } from './twitter-post';
 import { evaluatePostOutcome, finishRun, type PostOutcome } from './post-outcome';
+import {
+  confirmNewPost,
+  isUnverified,
+  linkedInListUrl,
+  postFingerprint,
+  readListCount,
+  threadsProfileUrl,
+  UNVERIFIED_PREFIX,
+  waitUntilGone,
+} from './post-verify';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -390,6 +400,20 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
       }
     }
 
+    // Count this post's opening on the profile BEFORE posting (post-verify.ts).
+    // ⚠️ GUESS: the profile list has not been captured live (Threads is disabled in executePost).
+    const profileUrl = threadsProfileUrl(process.env);
+    if (!profileUrl) {
+      return { success: false, error: 'Missing THREADS_PROFILE_URL (or a THREADS_USERNAME handle) needed to verify the post' };
+    }
+    const fingerprint = postFingerprint(text);
+    const before = await readListCount(page, profileUrl, fingerprint);
+    if (before.count === null) {
+      return { success: false, error: `Threads profile unreadable before posting (${before.reason}); not posted` };
+    }
+    await page.goto('https://www.threads.net/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForTimeout(4000);
+
     // Find Create button (may already be set from logged-in check above)
     console.log(`    [Threads attempt ${attempt}] Looking for Create button...`);
 
@@ -442,8 +466,16 @@ async function postToThreadsSingleAttempt(text: string, attempt: number): Promis
     const postBtn = page.locator('div[role="button"]:has-text("Post")').last();
     await postBtn.waitFor({ state: 'visible', timeout: 10000 });
     await postBtn.click();
-    await page.waitForTimeout(4000);
 
+    // Stay until the composer closes, then require a new entry on the profile.
+    const closed = await waitUntilGone(page, () => composer.isVisible());
+    if (!closed.gone) {
+      return { success: false, error: `${UNVERIFIED_PREFIX}: clicked Post but the composer was still open after ${closed.waitedMs / 1000}s; check ${profileUrl}` };
+    }
+    const v = await confirmNewPost({ page, listUrl: profileUrl, fingerprint, before: before.count, log: (m) => console.log(m) });
+    if (!v.verified) {
+      return { success: false, error: `${UNVERIFIED_PREFIX}: clicked Post but no new entry on ${profileUrl} (${v.reason})` };
+    }
     return { success: true };
   } catch (err: any) {
     try {
@@ -485,6 +517,10 @@ async function postToThreadsBrowser(text: string): Promise<{ success: boolean; e
 
     // Don't retry credential errors
     if (result.error?.includes('Missing THREADS_') || result.error?.includes('Login error')) {
+      break;
+    }
+    // Never retry after Post was clicked: the post may be live, and a retry posts it twice.
+    if (isUnverified(result.error)) {
       break;
     }
   }
@@ -543,6 +579,18 @@ async function postToLinkedInBrowser(text: string): Promise<{ success: boolean; 
         }
       }
 
+      // Count this post's opening on the published list BEFORE posting, so the check
+      // afterwards can require a NEW entry (see post-verify.ts). Unreadable = do not post.
+      const linkedInText = text + '\n\n#DistractionIndex #Democracy #CivicTech #ConstitutionalLaw #GovTech';
+      const listUrl = linkedInListUrl(companyId);
+      const fingerprint = postFingerprint(linkedInText);
+      const before = await readListCount(page, listUrl, fingerprint);
+      if (before.count === null) {
+        return { success: false, error: `LinkedIn list unreadable before posting (${before.reason}); not posted` };
+      }
+      await page.goto(shareUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForTimeout(5000);
+
       // Wait for composer (share=true should open it)
       const editor = page.getByRole('textbox', { name: /text editor/i });
       const editorVisible = await editor.isVisible({ timeout: 10000 }).catch(() => false);
@@ -565,7 +613,6 @@ async function postToLinkedInBrowser(text: string): Promise<{ success: boolean; 
       await page.keyboard.press('Backspace');
       await page.waitForTimeout(300);
 
-      const linkedInText = text + '\n\n#DistractionIndex #Democracy #CivicTech #ConstitutionalLaw #GovTech';
       await page.keyboard.type(linkedInText, { delay: 5 });
       await page.waitForTimeout(2000);
 
@@ -576,7 +623,9 @@ async function postToLinkedInBrowser(text: string): Promise<{ success: boolean; 
         return { success: false, error: 'LinkedIn Post button not enabled after typing' };
       }
       await postBtn.click();
-      await page.waitForTimeout(5000);
+
+      // Stay until the composer closes: leaving mid-send can cancel the post.
+      const closed = await waitUntilGone(page, () => composer.isVisible());
 
       // Dismiss success dialog
       const dismissBtn = page.getByRole('button', { name: 'Not now' });
@@ -584,6 +633,21 @@ async function postToLinkedInBrowser(text: string): Promise<{ success: boolean; 
         await dismissBtn.click();
       }
 
+      if (!closed.gone) {
+        return {
+          success: false,
+          error: `${UNVERIFIED_PREFIX}: clicked Post but the composer was still open after ${closed.waitedMs / 1000}s; check ${listUrl} before re-posting`,
+        };
+      }
+      // Clicking is not proof: require a new entry on the published list.
+      const v = await confirmNewPost({ page, listUrl, fingerprint, before: before.count, log: (m) => console.log(m) });
+      if (!v.verified) {
+        return {
+          success: false,
+          error: `${UNVERIFIED_PREFIX}: clicked Post but no new entry on ${listUrl} (${v.reason}); check it before re-posting`,
+        };
+      }
+      console.log(`    LinkedIn verified: ${v.reason}`);
       return { success: true };
     } finally {
       await context.close();
@@ -615,6 +679,11 @@ function isSlotDue(schedule: ScheduleState, slot: PostSlot): boolean {
 // Wrap a Playwright-based platform call with a hard timeout so it can't
 // hang the entire pipeline (L240: per-platform timeouts are essential).
 const PLAYWRIGHT_TIMEOUT_MS = 60_000; // 60 seconds max per Playwright platform
+// LinkedIn now reads its published list before posting and confirms the new entry after
+// (post-verify.ts): about +15 s before, up to 30 s for the composer to close, and up to
+// ~65 s of list checks. At 60 s a verified post could be cut off and logged as "timed out",
+// which already happened once without verification (2026-10-05). The task limit is 10 min.
+const LINKEDIN_TIMEOUT_MS = 180_000;
 
 async function withTimeout<T>(
   fn: () => Promise<T>,
@@ -671,15 +740,18 @@ async function executePost(slot: PostSlot): Promise<PostOutcome> {
 
   // --- Phase 2: Playwright-based platforms (may hang — 60s timeout each) ---
   let linkedin: { success: boolean; error?: string };
-  console.log(`  Posting to LinkedIn (60s timeout)...`);
+  console.log(`  Posting to LinkedIn (${LINKEDIN_TIMEOUT_MS / 1000}s timeout)...`);
   try {
     linkedin = await withTimeout(
       () => postToLinkedInBrowser(post.text),
-      PLAYWRIGHT_TIMEOUT_MS,
+      LINKEDIN_TIMEOUT_MS,
       'LinkedIn',
     );
   } catch (e: any) {
-    linkedin = { success: false, error: e.message.substring(0, 200) };
+    linkedin = {
+      success: false,
+      error: `${e.message.substring(0, 200)} — the post may still have gone out; check the LinkedIn page before re-posting`,
+    };
   }
   console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
 

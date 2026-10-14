@@ -42,3 +42,27 @@ describe('task setup scripts carry no machine-specific project path', () => {
     expect(text).not.toMatch(/\/xml "%SCRIPT_DIR%task-/);
   });
 });
+
+/**
+ * WHY (2026-10-13). DistractionIndex-EmailFollowups was retired: its contact list
+ * (outreach-contacts.csv, gitignored) exists nowhere, so every run failed (last 10-05,
+ * result 1). The task was unregistered with an XML backup kept outside the repo. A setup
+ * script that still creates it would quietly bring it back, so none may.
+ */
+describe('retired task DistractionIndex-EmailFollowups is never re-created', () => {
+  const CREATES_EMAIL_FOLLOWUPS = [
+    /schtasks\s+\/create\b[^\n]*DistractionIndex-EmailFollowups/i,
+    /Register-ScheduledTask\b[^\n]*DistractionIndex-EmailFollowups/i,
+    /Name\s*=\s*["']DistractionIndex-EmailFollowups["']/i,
+  ];
+
+  it('the patterns catch a create line (positive control)', () => {
+    const planted = 'schtasks /create /tn "DistractionIndex-EmailFollowups" /tr "cmd /c x" /sc weekly';
+    expect(CREATES_EMAIL_FOLLOWUPS.some((p) => p.test(planted))).toBe(true);
+  });
+
+  it.each(SETUP_FILES)('%s does not create DistractionIndex-EmailFollowups', (f) => {
+    const text = read(f);
+    for (const p of CREATES_EMAIL_FOLLOWUPS) expect(text).not.toMatch(p);
+  });
+});

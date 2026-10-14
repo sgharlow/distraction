@@ -16,15 +16,8 @@ $tasks = @(
     Time = "10:00"
     ExtraArgs = @()
   },
-  @{
-    Name = "DistractionIndex-EmailFollowups"
-    Script = "scripts/outreach/email-campaign.ts"
-    Log = "scripts\outreach\email-followup.log"
-    Schedule = "WEEKLY"
-    Time = "09:00"
-    ExtraArgs = @("/D", "MON")
-    ScriptArgs = "--followup"
-  },
+  # DistractionIndex-EmailFollowups was RETIRED 2026-10-13 (its contact list no
+  # longer exists) and is deliberately not re-created here.
   @{
     Name = "DistractionIndex-WeeklyCascade"
     Script = "scripts/outreach/substack-publish.ts"

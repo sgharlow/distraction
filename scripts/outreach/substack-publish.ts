@@ -21,7 +21,13 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 import { finishRun } from './post-outcome';
-import { confirmPublishAndHeartbeat, verifyPublished, waitForPublishComplete, writeHeartbeat } from './substack-verify';
+import { captureFailure, confirmPublishAndHeartbeat, verifyPublished, waitForPublishComplete, writeHeartbeat, type CapturePage } from './substack-verify';
+
+/** Failure screenshots (gitignored); see captureFailure. */
+const CAPTURE_DIR = resolve(__dirname, 'debug-screenshots');
+async function capture(page: CapturePage, label: string): Promise<void> {
+  for (const line of await captureFailure(page, label, CAPTURE_DIR)) console.log(`  [capture] ${line}`);
+}
 config({ path: resolve(__dirname, '../../.env.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -150,11 +156,12 @@ async function main() {
       if (await addBtnsBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
         await addBtnsBtn.click();
       }
-      // Stay on the editor until Substack finishes ("Publishing..." takes ~45 s). Leaving
-      // the page earlier cancels the publish and leaves the post a DRAFT (Week 93, 2026-10-11).
+      // Stay on the editor until Substack finishes ("Publishing..." takes ~45 s). See the
+      // 2026-10-18 CORRECTION in substack-verify.ts: Week 93 did publish; Week 94 stalled here.
       const sent = await waitForPublishComplete(page, { log: (m) => console.log(m) });
       if (!sent.done) {
         console.log(`  NOT PUBLISHED — ${sent.reason}`);
+        await capture(page, 'not-published');
         process.exitCode = finishRun('substack-publish', [
           `send clicked but Substack did not finish publishing: ${sent.reason}. The post is probably a DRAFT — ` +
             'open https://distractionindex.substack.com/publish/posts/drafts and publish that draft; do NOT re-run ' +
@@ -173,13 +180,16 @@ async function main() {
         log: (m) => console.log(m),
         heartbeat: (week) => writeHeartbeat(week, new Date()),
       });
+      if (failures.length) await capture(page, 'not-verified');
       process.exitCode = finishRun('substack-publish', failures);
     } else {
       console.log('  Could not find publish confirmation button');
+      await capture(page, 'no-send-button');
       process.exitCode = finishRun('substack-publish', ['publish confirmation button not found - post NOT sent']);
     }
   } catch (e: any) {
     console.log(`  ERROR: ${e.message.substring(0, 100)}`);
+    await capture(page, 'threw');
     process.exitCode = finishRun('substack-publish', [`threw: ${e.message.substring(0, 200)}`]);
   } finally {
     await context.close();

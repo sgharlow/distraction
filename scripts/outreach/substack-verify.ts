@@ -15,6 +15,8 @@
  * DashboardPage) and so is the gh runner, so the logic is unit-tested.
  */
 import { spawnSync } from 'child_process';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
 
 export const PUBLISHED_DASHBOARD_URL = 'https://distractionindex.substack.com/publish/posts/published';
 export const HEARTBEAT_WEEK_VAR = 'SUBSTACK_LAST_PUBLISHED_WEEK';
@@ -149,10 +151,15 @@ const PUBLISHED_POST_PAGE = /\/publish\/posts\/detail\/\d+/;
  * Wait on the editor until Substack has actually finished publishing.
  *
  * WHY (2026-10-11). After "Send to everyone now" the editor shows "Publishing..." for ~45 s and
- * only then moves to /publish/posts/detail/<id>/share-center. The publish run used to leave the
- * page ~8 s after the click (to verify on the dashboard), and leaving cancels the publish: Week 93
- * stayed a DRAFT. Done means the post page loaded; a page still on the editor at the timeout, or
- * a redirect to sign-in, is a failure. Never navigate the page while this is waiting.
+ * only then moves to /publish/posts/detail/<id>/share-center. Done means the post page loaded; a
+ * page still on the editor at the timeout, or a redirect to sign-in, is a failure. Never navigate
+ * the page while this is waiting.
+ *
+ * CORRECTION (2026-10-18). This was written on the belief that leaving the page early left Week 93
+ * a DRAFT. It did not: the dashboard shows Week 93 published on Oct 11, and `--verify-only` found it
+ * on the first check on 10-18. The 10-11 failure was the VERIFIER (it read 515 chars of a dashboard
+ * that had not rendered its list). Week 94 (10-18) then sat on the editor for the full 240 s and
+ * really stayed a draft, cause unknown — hence captureFailure below.
  */
 export async function waitForPublishComplete(
   page: PublishWatchPage,
@@ -181,6 +188,48 @@ export async function waitForPublishComplete(
     url,
     reason: `still on the editor after ${Math.round(waitedMs / 1000)} s (${url}); Substack did not finish publishing`,
   };
+}
+
+/** The subset of a Playwright Page the failure capture uses. */
+export interface CapturePage {
+  url(): string;
+  screenshot(opts: { path: string; fullPage?: boolean }): Promise<unknown>;
+  locator(selector: string): { allInnerTexts(): Promise<string[]> };
+}
+
+/**
+ * Record what the page looked like when a publish run failed: a full-page screenshot in `dir`
+ * plus the URL and the text of any open dialog. WHY (2026-10-18): Week 94 sat on the editor for
+ * 240 s and the run left nothing to diagnose it with. Never throws — a capture problem is
+ * reported in the returned lines so it cannot mask the failure being recorded.
+ */
+export async function captureFailure(page: CapturePage, label: string, dir: string, now: Date = new Date()): Promise<string[]> {
+  const lines: string[] = [];
+  let url = '(unknown)';
+  try {
+    url = page.url();
+  } catch {
+    /* keep (unknown) */
+  }
+  lines.push(`url: ${url}`);
+  try {
+    const dialogs = (await page.locator('[role="dialog"], [role="alertdialog"]').allInnerTexts())
+      .map((t) => t.split('\n').map((s) => s.trim()).filter(Boolean).join(' | '))
+      .filter(Boolean);
+    lines.push(dialogs.length ? dialogs.map((d) => `dialog: ${d.slice(0, 300)}`).join('\n') : 'dialog: none open');
+  } catch (e) {
+    lines.push(`dialog read failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 150)}`);
+  }
+  try {
+    mkdirSync(dir, { recursive: true });
+    const stamp = now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/:/g, '-');
+    const path = join(dir, `substack-${label}-${stamp}.png`);
+    await page.screenshot({ path, fullPage: true });
+    lines.push(`screenshot: ${path}`);
+  } catch (e) {
+    lines.push(`screenshot failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 150)}`);
+  }
+  return lines;
 }
 
 function ghFailure(r: GhResult): string {

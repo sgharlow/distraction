@@ -14,7 +14,9 @@ config({ path: resolve(__dirname, '../../.env.local') });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  // Read-only: these tables are public-read under RLS, so the public anon key reads the same rows
+  // (measured 2026-10-21) and the shared Supabase service-role key never leaves the laptop.
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   { db: { schema: 'distraction' } }
 );
 

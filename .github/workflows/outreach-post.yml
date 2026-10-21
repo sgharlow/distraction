@@ -1,0 +1,111 @@
+# Social posting slots (Bluesky + Mastodon), moved here from Windows Task Scheduler on VICTUS on
+# 2026-10-21: every Task Scheduler launch flashed a console window on Steve's screen
+# (__project-docs/local-task-elimination-plan-2026-10-20.md, Phase 2). LinkedIn and Substack were
+# browser automation and are retired, not ported (DISABLED_PLATFORMS in scripts/outreach/post-outcome.ts).
+#
+# Slots, at the times the laptop tasks used (America/Phoenix, which has no DST):
+#   morning  06:30 Phoenix = 13:30Z daily   scheduler.ts --post morning --no-catchup
+#   midday   12:30 Phoenix = 19:30Z daily   scheduler.ts --post midday  --no-catchup
+#   thread   14:00 Phoenix = 21:00Z Monday  bluesky-thread.ts
+# --no-catchup ALWAYS: with catch-up on, a midday run whose history lacks this morning's post
+# would post the morning slot as well, so a dropped hosted-cron run (or the first cloud day, when
+# the laptop made the morning post) would double-post. A dropped slot is simply skipped.
+#
+# State: scheduler.ts dedupes a slot per day from post-history.json. The file lives in the Actions
+# cache (a new key per run, restored by prefix), not in git — a commit to any branch would start a
+# Vercel build. Losing the cache only loses dedupe history for the day.
+#
+# Secrets (repository secrets): BLUESKY_HANDLE, BLUESKY_APP_PASSWORD, MASTODON_INSTANCE,
+# MASTODON_ACCESS_TOKEN. Variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY — the
+# public read key; the posting scripts only read public-read tables. The service-role key is NOT
+# used here. This repo is PUBLIC: run logs are public, so the scripts must never print a secret.
+#
+# Absence is watched by outreach-deadman.yml (reads the public Bluesky feed).
+name: outreach post
+
+on:
+  schedule:
+    - cron: '30 13 * * *'   # morning
+    - cron: '30 19 * * *'   # midday
+    - cron: '0 21 * * 1'    # weekly thread (Monday)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'morning | midday | thread'
+        required: true
+        default: thread
+      dry_run:
+        description: 'thread only: build the thread without posting (true/false)'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: outreach-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+      MASTODON_INSTANCE: ${{ secrets.MASTODON_INSTANCE }}
+      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+    steps:
+      - name: Pick the slot
+        id: slot
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_JOB: ${{ inputs.job }}
+        run: |
+          case "$SCHEDULE" in
+            '30 13 * * *') job=morning ;;
+            '30 19 * * *') job=midday ;;
+            '0 21 * * 1')  job=thread ;;
+            '')            job="$INPUT_JOB" ;;
+            *) echo "unknown schedule '$SCHEDULE'"; exit 1 ;;
+          esac
+          case "$job" in morning|midday|thread) ;; *) echo "bad job '$job'"; exit 1 ;; esac
+          echo "job=$job" >> "$GITHUB_OUTPUT"
+          echo "slot: $job"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Restore post history
+        if: steps.slot.outputs.job != 'thread'
+        uses: actions/cache/restore@v6
+        with:
+          path: scripts/outreach/post-history.json
+          key: outreach-history-${{ github.run_id }}
+          restore-keys: outreach-history-
+
+      - name: Post the slot
+        if: steps.slot.outputs.job != 'thread'
+        run: npx tsx scripts/outreach/scheduler.ts --post "${{ steps.slot.outputs.job }}" --no-catchup
+
+      - name: Save post history
+        if: always() && steps.slot.outputs.job != 'thread' && hashFiles('scripts/outreach/post-history.json') != ''
+        uses: actions/cache/save@v6
+        with:
+          path: scripts/outreach/post-history.json
+          key: outreach-history-${{ github.run_id }}
+
+      - name: Post the weekly thread
+        if: steps.slot.outputs.job == 'thread'
+        env:
+          DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run != 'false' && '--dry-run' || '' }}
+        run: npx tsx scripts/outreach/bluesky-thread.ts $DRY

@@ -20,6 +20,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { createHmac, randomBytes } from 'crypto';
 import { generatePost, type PostSlot } from './content-variants';
+import { disabledResult, isPlatformDisabled } from './post-outcome';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -201,6 +202,9 @@ async function postThread(text: string): Promise<{ success: boolean; error?: str
 // Export for scheduler integration
 // ---------------------------------------------------------------------------
 export async function postToTwitter(text: string): Promise<{ success: boolean; error?: string }> {
+  // Switched off (Steve, 2026-10-20): no network call for any caller. See post-outcome.ts.
+  if (isPlatformDisabled('twitter')) return disabledResult('twitter');
+
   // Check if credentials exist
   if (!process.env.TWITTER_API_KEY) {
     return { success: false, error: 'Twitter/X not configured (no TWITTER_API_KEY)' };

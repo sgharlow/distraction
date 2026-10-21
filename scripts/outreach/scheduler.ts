@@ -1,6 +1,7 @@
 /**
  * Automated 3x/day social media scheduler.
- * Posts to Bluesky + Mastodon + Threads + LinkedIn + Twitter/X at random times within 3 daily windows.
+ * Posts to Bluesky + Mastodon + LinkedIn at random times within 3 daily windows.
+ * Threads and Twitter/X are switched off (DISABLED_PLATFORMS in post-outcome.ts).
  *
  * Windows (EST):
  *   Morning:  6:00 AM - 8:00 AM
@@ -24,7 +25,15 @@ import { resolve } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { generatePost, type PostSlot } from './content-variants';
 import { postToTwitter } from './twitter-post';
-import { evaluatePostOutcome, finishRun, type PostOutcome } from './post-outcome';
+import {
+  activePlatformNames,
+  countPlatforms,
+  disabledResult,
+  evaluatePostOutcome,
+  finishRun,
+  isPlatformDisabled,
+  type PostOutcome,
+} from './post-outcome';
 import {
   confirmNewPost,
   isUnverified,
@@ -718,7 +727,7 @@ async function executePost(slot: PostSlot): Promise<PostOutcome> {
   // Threads disabled — Meta UI changes cause Playwright timeouts that block
   // the entire posting pipeline and kill the Windows Task Scheduler job.
   // Re-enable when Threads stabilizes or an API becomes available.
-  const threads = { success: false, error: 'Threads posting disabled (Meta UI instability)' };
+  const threads = disabledResult('threads');
   console.log(`  Threads: SKIPPED (disabled — Meta UI instability)`);
 
   // Save immediately after API platforms — guarantees Bluesky + Mastodon
@@ -756,28 +765,34 @@ async function executePost(slot: PostSlot): Promise<PostOutcome> {
   console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
 
   let twitter: { success: boolean; error?: string };
-  console.log(`  Posting to Twitter/X (60s timeout)...`);
-  try {
-    twitter = await withTimeout(
-      () => postToTwitter(post.text),
-      PLAYWRIGHT_TIMEOUT_MS,
-      'Twitter/X',
-    );
-  } catch (e: any) {
-    twitter = { success: false, error: e.message.substring(0, 200) };
+  if (isPlatformDisabled('twitter')) {
+    // Switched off by Steve 2026-10-20 (API credits depleted since 2026-08-28).
+    twitter = disabledResult('twitter');
+    console.log(`  Twitter/X: SKIPPED (disabled — API credits depleted)`);
+  } else {
+    console.log(`  Posting to Twitter/X (60s timeout)...`);
+    try {
+      twitter = await withTimeout(
+        () => postToTwitter(post.text),
+        PLAYWRIGHT_TIMEOUT_MS,
+        'Twitter/X',
+      );
+    } catch (e: any) {
+      twitter = { success: false, error: e.message.substring(0, 200) };
+    }
+    // X is OPTIONAL when enabled: a failure is logged as a non-fatal skip and
+    // can never fail the run.
+    console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'SKIPPED (non-fatal): ' + twitter.error}`);
   }
-  // X is OPTIONAL (API credits depleted since 2026-09): still attempted, but a
-  // failure is logged as a non-fatal skip and can never fail the run.
-  console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'SKIPPED (non-fatal): ' + twitter.error}`);
 
   // --- Update the saved record with Playwright platform results ---
   updateLastHistoryRecord(slot, { linkedin, twitter });
 
-  const platforms = [bsky, masto, threads, linkedin, twitter];
-  const succeeded = platforms.filter(p => p.success).length;
-  console.log(`  Result: ${succeeded}/${platforms.length} platforms succeeded`);
+  const results = { bluesky: bsky, mastodon: masto, threads, linkedin, twitter };
+  const { succeeded, total } = countPlatforms(results);
+  console.log(`  Result: ${succeeded}/${total} platforms succeeded`);
 
-  const outcome = evaluatePostOutcome({ bluesky: bsky, mastodon: masto, threads, linkedin, twitter });
+  const outcome = evaluatePostOutcome(results);
   for (const w of outcome.warnings) console.log(`  WARNING: ${w}`);
   for (const f of outcome.failed) console.error(`  REQUIRED PLATFORM FAILED: ${f}`);
   recordOutcome(slot, outcome);
@@ -787,7 +802,7 @@ async function executePost(slot: PostSlot): Promise<PostOutcome> {
 async function runSchedulerLoop(): Promise<void> {
   console.log('=== Distraction Index Social Scheduler ===');
   console.log(`Started at ${new Date().toISOString()}`);
-  console.log('Posting to: Bluesky + Mastodon + Threads + LinkedIn + Twitter/X');
+  console.log(`Posting to: ${activePlatformNames().join(' + ')}`);
   console.log('Schedule: 3x/day (morning 6-8am, midday 12-2pm, evening 5-8pm EST)\n');
 
   while (true) {

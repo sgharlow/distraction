@@ -1,7 +1,9 @@
 /**
  * Automated 3x/day social media scheduler.
- * Posts to Bluesky + Mastodon + LinkedIn at random times within 3 daily windows.
- * Threads and Twitter/X are switched off (DISABLED_PLATFORMS in post-outcome.ts).
+ * Posts to Bluesky + Mastodon. Threads, Twitter/X and LinkedIn are switched off
+ * (DISABLED_PLATFORMS in post-outcome.ts).
+ * Since 2026-10-21 the morning and midday slots run as `--post <slot> --no-catchup` from
+ * .github/workflows/outreach-post.yml, not from Windows Task Scheduler on VICTUS.
  *
  * Windows (EST):
  *   Morning:  6:00 AM - 8:00 AM
@@ -749,20 +751,26 @@ async function executePost(slot: PostSlot): Promise<PostOutcome> {
 
   // --- Phase 2: Playwright-based platforms (may hang — 60s timeout each) ---
   let linkedin: { success: boolean; error?: string };
-  console.log(`  Posting to LinkedIn (${LINKEDIN_TIMEOUT_MS / 1000}s timeout)...`);
-  try {
-    linkedin = await withTimeout(
-      () => postToLinkedInBrowser(post.text),
-      LINKEDIN_TIMEOUT_MS,
-      'LinkedIn',
-    );
-  } catch (e: any) {
-    linkedin = {
-      success: false,
-      error: `${e.message.substring(0, 200)} — the post may still have gone out; check the LinkedIn page before re-posting`,
-    };
+  if (isPlatformDisabled('linkedin')) {
+    // Browser automation retired by Steve 2026-10-20 (slots run on GitHub Actions, no browser session).
+    linkedin = disabledResult('linkedin');
+    console.log(`  LinkedIn: SKIPPED (disabled — browser automation retired)`);
+  } else {
+    console.log(`  Posting to LinkedIn (${LINKEDIN_TIMEOUT_MS / 1000}s timeout)...`);
+    try {
+      linkedin = await withTimeout(
+        () => postToLinkedInBrowser(post.text),
+        LINKEDIN_TIMEOUT_MS,
+        'LinkedIn',
+      );
+    } catch (e: any) {
+      linkedin = {
+        success: false,
+        error: `${e.message.substring(0, 200)} — the post may still have gone out; check the LinkedIn page before re-posting`,
+      };
+    }
+    console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
   }
-  console.log(`  LinkedIn: ${linkedin.success ? 'SUCCESS' : 'FAILED: ' + linkedin.error}`);
 
   let twitter: { success: boolean; error?: string };
   if (isPlatformDisabled('twitter')) {

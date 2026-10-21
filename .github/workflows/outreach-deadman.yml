@@ -1,0 +1,74 @@
+# Dead-man for outreach-post.yml (2026-10-21). A posting job cannot report its own absence, and a
+# hosted cron that never fires produces no failed run to notice. This reads the PUBLIC Bluesky feed
+# (no login) and opens a priority-high issue (read by /daily-priority) when the account's newest
+# own post is older than the threshold. Two slots a day, so 24 h = two consecutive slots missed.
+# The verdict is the post on Bluesky, not the job's own log or state.
+# Prove the red path: dispatch with threshold_hours=0. A check that cannot read the feed ALERTS.
+name: outreach post dead-man
+
+on:
+  schedule:
+    - cron: '0 15 * * *'   # 08:00 Phoenix, after the 13:30Z morning slot
+  workflow_dispatch:
+    inputs:
+      threshold_hours:
+        description: 'Alert when the newest own post is older than this many hours (0 forces the alert)'
+        required: false
+        default: '24'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - id: verdict
+        env:
+          HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          THRESHOLD_HOURS: ${{ inputs.threshold_hours || '24' }}
+        run: |
+          set +e
+          url="https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${HANDLE}&limit=30&filter=posts_no_replies"
+          last=$(curl -fsS "$url" | jq -r --arg h "$HANDLE" '[.feed[] | select(.reason == null and .post.author.handle == $h) | .post.record.createdAt] | max // empty')
+          if [ -z "$last" ]; then
+            echo "state=ERROR" >> "$GITHUB_OUTPUT"
+            echo "reason=could not read an own post from the public Bluesky feed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          age=$(( ( $(date -u +%s) - $(date -u -d "$last" +%s) ) / 3600 ))
+          echo "newest own post ${last} (${age}h ago), threshold ${THRESHOLD_HOURS}h"
+          if [ "$age" -gt "$THRESHOLD_HOURS" ] || [ "$THRESHOLD_HOURS" = "0" ]; then
+            echo "state=STALE" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=OK" >> "$GITHUB_OUTPUT"
+          fi
+          echo "reason=newest own Bluesky post ${last} is ${age}h old (threshold ${THRESHOLD_HOURS}h)" >> "$GITHUB_OUTPUT"
+      # always(): a failed step must still reach the alert.
+      - name: Raise or clear the alert
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATE: ${{ steps.verdict.outputs.state }}
+          REASON: ${{ steps.verdict.outputs.reason }}
+        run: |
+          if [ -z "$STATE" ]; then STATE=ERROR; REASON="the check produced no verdict"; fi
+          title="outreach posts missing (Bluesky + Mastodon slots)"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh label create priority-high --color B60205 --description "Outranks feature work; read by /daily-priority" --force >/dev/null
+          existing=$(gh issue list --state open --label priority-high --json number,title --jq ".[] | select(.title == \"${title}\") | .number" | head -n1)
+          if [ "$STATE" = "OK" ]; then
+            [ -n "$existing" ] && gh issue close "$existing" --comment "Posting is running again: ${REASON}. ${run_url}"
+            echo "OK: ${REASON}"
+            exit 0
+          fi
+          if [ -z "$existing" ]; then
+            gh issue create --title "$title" --label priority-high --body "**${STATE}** — ${REASON}.
+
+          The slots run from .github/workflows/outreach-post.yml (morning 13:30Z, midday 19:30Z). Check its recent runs first: a red run names the failing platform; NO run means the hosted cron did not fire. Common causes: an expired Bluesky app password or Mastodon token (repository secrets), a Supabase outage (post generation reads it), GitHub disabling scheduled workflows after 60 days without repo activity. Run one slot by hand: Actions → outreach post → Run workflow → job=morning. This issue closes itself on the next check that sees a fresh post. Detected by ${run_url}"
+          else
+            gh issue comment "$existing" --body "Still ${STATE} at $(date -u +%FT%TZ): ${REASON} (${run_url})"
+          fi
+          exit 1

@@ -9,13 +9,16 @@
  * therefore meaningless. A failing run must exit non-zero and say why.
  *
  * Platform policy for a scheduled social slot:
- *   - REQUIRED  bluesky, mastodon, linkedin  → any failure fails the run
+ *   - REQUIRED  bluesky, mastodon, linkedin  → any failure fails the run, while the
+ *                platform is enabled
  *   - OPTIONAL  twitter                      → failure is a logged warning only,
  *                while X is enabled
- *   - DISABLED  threads, twitter             → never called, never a warning, and
- *                left out of the "N/M platforms succeeded" count. Steve switched X
- *                off on 2026-10-20 (API credits depleted since 2026-08-28); remove
- *                'twitter' from DISABLED_PLATFORMS to turn it back on.
+ *   - DISABLED  threads, twitter, linkedin   → never called, never a failure or a
+ *                warning, and left out of the "N/M platforms succeeded" count. Steve
+ *                switched X off on 2026-10-20 (API credits depleted since 2026-08-28)
+ *                and retired LinkedIn's browser automation the same day, when the
+ *                slots moved to GitHub Actions (.github/workflows/outreach-post.yml).
+ *                Remove a platform from DISABLED_PLATFORMS to turn it back on.
  * No I/O here beyond the injected logger, so it is unit-testable.
  */
 
@@ -37,11 +40,12 @@ export const OPTIONAL_PLATFORMS = ['twitter'] as const;
 
 export type SlotPlatform = keyof SlotPlatformResults;
 
-export const DISABLED_PLATFORMS: readonly SlotPlatform[] = ['threads', 'twitter'];
+export const DISABLED_PLATFORMS: readonly SlotPlatform[] = ['threads', 'twitter', 'linkedin'];
 
 const DISABLED_REASON: Partial<Record<SlotPlatform, string>> = {
   threads: 'Threads posting disabled (Meta UI instability)',
   twitter: 'X posting disabled (API credits depleted since 2026-08-28; Steve 2026-10-20)',
+  linkedin: 'LinkedIn posting disabled (browser automation retired when posting moved to GitHub Actions; Steve 2026-10-20)',
 };
 
 const PLATFORM_LABEL: Record<SlotPlatform, string> = {
@@ -93,6 +97,8 @@ export function evaluatePostOutcome(
   const warnings: string[] = [];
 
   for (const platform of REQUIRED_PLATFORMS) {
+    // A switched-off platform is never called, so it can never fail the run.
+    if (disabled.includes(platform)) continue;
     const r = results[platform];
     // Fail closed: a missing result is a failure, not a pass.
     if (!r) failed.push(`${platform}: no result recorded`);

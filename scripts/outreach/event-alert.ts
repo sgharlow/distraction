@@ -20,6 +20,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { postToTwitter } from './twitter-post';
+import { disabledResult, isPlatformDisabled } from './post-outcome';
 
 config({ path: resolve(__dirname, '../../.env.local') });
 
@@ -271,14 +272,20 @@ async function main() {
     const masto = await postToMastodon(alertText);
     console.log(`  Mastodon: ${masto.success ? 'SUCCESS' : 'FAILED: ' + masto.error}`);
 
-    console.log('  Posting to Twitter/X...');
     let twitter: { success: boolean; error?: string };
-    try {
-      twitter = await postToTwitter(alertText);
-    } catch (e: any) {
-      twitter = { success: false, error: e.message };
+    if (isPlatformDisabled('twitter')) {
+      // Switched off by Steve 2026-10-20 (API credits depleted since 2026-08-28).
+      twitter = disabledResult('twitter');
+      console.log('  Twitter/X: SKIPPED (disabled — API credits depleted)');
+    } else {
+      console.log('  Posting to Twitter/X...');
+      try {
+        twitter = await postToTwitter(alertText);
+      } catch (e: any) {
+        twitter = { success: false, error: e.message };
+      }
+      console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'FAILED: ' + twitter.error}`);
     }
-    console.log(`  Twitter/X: ${twitter.success ? 'SUCCESS' : 'FAILED: ' + twitter.error}`);
 
     // Record alert
     const record: AlertRecord = {

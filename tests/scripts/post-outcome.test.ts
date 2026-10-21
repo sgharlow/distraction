@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   evaluatePostOutcome,
+  countPlatforms,
+  disabledResult,
+  isPlatformDisabled,
+  activePlatformNames,
   finishRun,
   type SlotPlatformResults,
 } from '../../scripts/outreach/post-outcome';
@@ -17,9 +21,43 @@ const SEPT_5: SlotPlatformResults = {
   twitter: fail('Tweet failed: 402 {"detail":"credits depleted"}'),
 };
 
+// The shape scheduler.ts records once X is switched off (Steve, 2026-10-20).
+const OCT_20: SlotPlatformResults = { ...SEPT_5, twitter: disabledResult('twitter') };
+
+describe('disabled platforms (X switched off 2026-10-20)', () => {
+  it('lists both Threads and X as disabled, and no other platform', () => {
+    expect(isPlatformDisabled('threads')).toBe(true);
+    expect(isPlatformDisabled('twitter')).toBe(true);
+    for (const p of ['bluesky', 'mastodon', 'linkedin'] as const) expect(isPlatformDisabled(p)).toBe(false);
+  });
+
+  it('records a disabled X slot with the ruling as its error, in the existing result shape', () => {
+    expect(disabledResult('twitter')).toEqual({
+      success: false,
+      error: 'X posting disabled (API credits depleted since 2026-08-28; Steve 2026-10-20)',
+    });
+  });
+
+  it('does not warn about a disabled X slot', () => {
+    const outcome = evaluatePostOutcome(OCT_20);
+    expect(outcome.ok).toBe(true);
+    expect(outcome.failed).toEqual([]);
+    expect(outcome.warnings).toEqual([]);
+  });
+
+  it('leaves disabled platforms out of the success count and its denominator', () => {
+    expect(countPlatforms(OCT_20)).toEqual({ succeeded: 3, total: 3 });
+    expect(countPlatforms({ ...OCT_20, linkedin: fail('timed out') })).toEqual({ succeeded: 2, total: 3 });
+  });
+
+  it('names only active platforms for the startup banner', () => {
+    expect(activePlatformNames()).toEqual(['Bluesky', 'Mastodon', 'LinkedIn']);
+  });
+});
+
 describe('evaluatePostOutcome', () => {
-  it('treats an X/Twitter failure as a non-fatal warning (credits depleted is not a failed run)', () => {
-    const outcome = evaluatePostOutcome(SEPT_5);
+  it('treats an X/Twitter failure as a non-fatal warning when X is enabled again', () => {
+    const outcome = evaluatePostOutcome(SEPT_5, ['threads']);
     expect(outcome.ok).toBe(true);
     expect(outcome.failed).toEqual([]);
     expect(outcome.warnings).toHaveLength(1);

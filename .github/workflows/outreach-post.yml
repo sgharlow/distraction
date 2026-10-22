@@ -3,10 +3,12 @@
 # (__project-docs/local-task-elimination-plan-2026-10-20.md, Phase 2). LinkedIn and Substack were
 # browser automation and are retired, not ported (DISABLED_PLATFORMS in scripts/outreach/post-outcome.ts).
 #
-# Slots, at the times the laptop tasks used (America/Phoenix, which has no DST):
-#   morning  06:30 Phoenix = 13:30Z daily   scheduler.ts --post morning --no-catchup
-#   midday   12:30 Phoenix = 19:30Z daily   scheduler.ts --post midday  --no-catchup
-#   thread   14:00 Phoenix = 21:00Z Monday  bluesky-thread.ts
+# Slots (America/Phoenix, which has no DST). Minutes moved off :00/:30 on 2026-10-22: hosted cron ran
+# 3h05m-4h38m late there; GitHub names the top of the hour as its busiest time. The case arms in
+# "Pick the slot" must match these strings exactly (tests/scripts/outreach-workflow-crons.test.ts):
+#   morning  06:17 Phoenix = 13:17Z daily   scheduler.ts --post morning --no-catchup
+#   midday   12:17 Phoenix = 19:17Z daily   scheduler.ts --post midday  --no-catchup
+#   thread   14:07 Phoenix = 21:07Z Monday  bluesky-thread.ts
 # --no-catchup ALWAYS: with catch-up on, a midday run whose history lacks this morning's post
 # would post the morning slot as well, so a dropped hosted-cron run (or the first cloud day, when
 # the laptop made the morning post) would double-post. A dropped slot is simply skipped.
@@ -25,9 +27,9 @@ name: outreach post
 
 on:
   schedule:
-    - cron: '30 13 * * *'   # morning
-    - cron: '30 19 * * *'   # midday
-    - cron: '0 21 * * 1'    # weekly thread (Monday)
+    - cron: '17 13 * * *'   # morning
+    - cron: '17 19 * * *'   # midday
+    - cron: '7 21 * * 1'    # weekly thread (Monday)
   workflow_dispatch:
     inputs:
       job:
@@ -66,9 +68,9 @@ jobs:
           INPUT_JOB: ${{ inputs.job }}
         run: |
           case "$SCHEDULE" in
-            '30 13 * * *') job=morning ;;
-            '30 19 * * *') job=midday ;;
-            '0 21 * * 1')  job=thread ;;
+            '17 13 * * *') job=morning ;;
+            '17 19 * * *') job=midday ;;
+            '7 21 * * 1')  job=thread ;;
             '')            job="$INPUT_JOB" ;;
             *) echo "unknown schedule '$SCHEDULE'"; exit 1 ;;
           esac

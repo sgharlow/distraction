@@ -8,7 +8,7 @@ name: outreach post dead-man
 
 on:
   schedule:
-    - cron: '0 15 * * *'   # 08:00 Phoenix, after the 13:30Z morning slot
+    - cron: '43 15 * * *'   # 08:43 Phoenix, after the 13:17Z morning slot (off :00/:30 since 2026-10-22)
   workflow_dispatch:
     inputs:
       threshold_hours:
@@ -67,7 +67,7 @@ jobs:
           if [ -z "$existing" ]; then
             gh issue create --title "$title" --label priority-high --body "**${STATE}** — ${REASON}.
 
-          The slots run from .github/workflows/outreach-post.yml (morning 13:30Z, midday 19:30Z). Check its recent runs first: a red run names the failing platform; NO run means the hosted cron did not fire. Common causes: an expired Bluesky app password or Mastodon token (repository secrets), a Supabase outage (post generation reads it), GitHub disabling scheduled workflows after 60 days without repo activity. Run one slot by hand: Actions → outreach post → Run workflow → job=morning. This issue closes itself on the next check that sees a fresh post. Detected by ${run_url}"
+          The slots run from .github/workflows/outreach-post.yml (morning 13:17Z, midday 19:17Z). Check its recent runs first: a red run names the failing platform; NO run means the hosted cron did not fire. Common causes: an expired Bluesky app password or Mastodon token (repository secrets), a Supabase outage (post generation reads it), GitHub disabling scheduled workflows after 60 days without repo activity. Run one slot by hand: Actions → outreach post → Run workflow → job=morning. This issue closes itself on the next check that sees a fresh post. Detected by ${run_url}"
           else
             gh issue comment "$existing" --body "Still ${STATE} at $(date -u +%FT%TZ): ${REASON} (${run_url})"
           fi

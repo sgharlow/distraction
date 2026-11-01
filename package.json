@@ -50,7 +50,7 @@
     "directories:submit:dry": "npx tsx scripts/submit-directories.ts --dry-run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.74.0",
+    "@anthropic-ai/sdk": "^1.3.0",
     "@sentry/nextjs": "^10.78.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.117.1",

@@ -9,8 +9,9 @@
  *   bluesky   - Post weekly summary to Bluesky
  *   mastodon  - Post weekly summary to Mastodon
  *   email     - Send follow-up emails (use --new-targets for constitutional orgs)
- *   forms     - Submit contact forms via Playwright
- *   reddit    - Post to relevant subreddits
+ *
+ * Retired 2026-11-20 (Steve): the `forms` and `reddit` channels and their scripts. Both clicked submit and
+ * reported success without checking that anything was posted, and neither had run since March 2026.
  *
  * Recommended weekly workflow:
  *   1. Run on Sunday/Monday after week freezes:
@@ -19,9 +20,6 @@
  *   2. Run monthly for email campaigns:
  *      npx tsx scripts/outreach/email-campaign.ts --new-targets --dry-run
  *      npx tsx scripts/outreach/email-campaign.ts --followup --dry-run
- *
- *   3. Run quarterly for contact form submissions:
- *      npx tsx scripts/outreach/submit-contact-forms.ts --dry-run
  */
 import { execSync } from 'child_process';
 import { resolve } from 'path';
@@ -44,16 +42,6 @@ const CHANNELS: Record<string, { script: string; args: string[]; description: st
     script: 'email-campaign.ts',
     args: ['--followup'],
     description: 'Send follow-up emails to non-responders',
-  },
-  forms: {
-    script: 'submit-contact-forms.ts',
-    args: [],
-    description: 'Submit contact forms via Playwright',
-  },
-  reddit: {
-    script: 'post-reddit.ts',
-    args: [],
-    description: 'Post to relevant subreddits',
   },
 };
 

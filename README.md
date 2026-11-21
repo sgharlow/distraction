@@ -58,7 +58,7 @@ The ingestion pipeline runs automatically every 4 hours:
 
 ## Outreach Automation
 
-`scripts/outreach/run-all.ts` orchestrates **5 channels**: bluesky, mastodon, email, forms, reddit. Additional standalone scripts exist for linkedin, twitter, threads, and substack but are not wired into the run-all orchestrator.
+`scripts/outreach/run-all.ts` orchestrates **3 channels**: bluesky, mastodon, email (the forms and reddit channels were retired 2026-11-20). Additional standalone scripts exist for linkedin, twitter, threads, and substack but are not wired into the run-all orchestrator.
 
 ## Data
 
